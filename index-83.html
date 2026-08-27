@@ -1,0 +1,2770 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mis Finanzas</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B2A4A">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mis Finanzas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1B2A4A;
+    --ink-soft: #4A5A78;
+    --paper: #FBF8F1;
+    --line: #D7CDBA;
+    --sage: #4F7A5C;
+    --rust: #A6543A;
+    --gold: #B98A2F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    background-image: repeating-linear-gradient(to bottom, transparent, transparent 27px, #D7CDBA55 28px);
+    font-family: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink);
+  }
+  .ledger-num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .ledger-title { font-family: 'Fraunces', serif; }
+  input, select, textarea, button { font-family: inherit; }
+  input:focus, select:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 18px 32px; }
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px; margin-bottom: 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 44px; height: 44px; border-radius: 10px; background: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand h1 { font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -0.3px; }
+  .brand p { margin: 0; font-size: 12.5px; color: var(--ink-soft); }
+  .balance-stamp {
+    border-radius: 10px; padding: 10px 18px; text-align: right;
+    transform: rotate(-1deg); background: var(--paper); border: 2px solid var(--sage);
+  }
+  .balance-stamp.negative { border-color: var(--rust); }
+  .balance-stamp .label { font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-soft); }
+  .balance-stamp .value { font-size: 24px; font-weight: 700; color: var(--sage); }
+  .balance-stamp.negative .value { color: var(--rust); }
+
+  .error-box {
+    background: #F5E6E1; border: 1px solid var(--rust); color: var(--rust);
+    padding: 10px 14px; border-radius: 8px; margin-bottom: 18px; font-size: 14px; display: none;
+  }
+  .grid-main { display: grid; grid-template-columns: 1fr; gap: 24px; }
+  .form-row { display: grid; grid-template-columns: 1fr; gap: 24px; }
+  @media (min-width: 720px) { .form-row { grid-template-columns: 1.1fr 0.9fr; align-items: start; } }
+
+  .card {
+    background: white; border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(27,42,74,0.06);
+  }
+  .form-card { padding: 20px; }
+  .form-card.editing { border-color: var(--gold); }
+  .edit-banner {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    background: #FBF1DD; border: 1px solid var(--gold); border-radius: 8px; padding: 7px 10px;
+  }
+  .edit-banner span { font-size: 12.5px; color: var(--gold); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .edit-banner button { background: transparent; border: none; color: var(--ink-soft); cursor: pointer; display: flex; align-items: center; }
+
+  .tipo-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tipo-btn {
+    flex: 1; padding: 9px 0; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px; background: transparent;
+  }
+  .tipo-btn.gasto { border: 1.5px solid var(--rust); color: var(--rust); }
+  .tipo-btn.gasto.active { background: var(--rust); color: white; }
+  .tipo-btn.aporte { border: 1.5px solid var(--sage); color: var(--sage); }
+  .tipo-btn.aporte.active { background: var(--sage); color: white; }
+
+  .field { display: block; margin-bottom: 12px; }
+  .field label {
+    display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .field input, .field select {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+    font-size: 14px; color: var(--ink); background: var(--paper);
+  }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  #submitBtn {
+    margin-top: 6px; width: 100%; background: var(--ink); color: var(--paper); border: none;
+    border-radius: 9px; padding: 11px 0; font-weight: 600; font-size: 14.5px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  #submitBtn.editing-mode { background: var(--gold); }
+  #submitBtn:disabled { opacity: 0.6; cursor: default; }
+
+  .summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rango-indicator {
+    margin: 0 0 2px; font-size: 11.5px; color: var(--gold); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .summary-card { padding: 16px 18px; }
+  .summary-card .label {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .summary-card .value { font-size: 21px; font-weight: 700; color: var(--ink); margin-top: 6px; }
+
+  .chart-card { padding: 16px 18px 6px; margin-bottom: 20px; }
+  .chart-card h3 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
+  .chart-card canvas { max-height: 220px; }
+  .chart-canvas-wrap { position: relative; height: 220px; width: 100%; }
+
+  .ledger-header {
+    display: flex; align-items: center; justify-content: space-between; padding: 14px 18px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .ledger-header h2 { font-size: 16px; margin: 0; font-weight: 600; }
+  #exportBtn {
+    display: flex; align-items: center; gap: 6px; font-size: 12.5px; background: transparent;
+    border: 1px solid var(--ink); color: var(--ink); border-radius: 7px; padding: 6px 10px; cursor: pointer;
+  }
+  #exportBtn:disabled { cursor: not-allowed; opacity: 0.4; }
+
+  .movements-list { max-height: 340px; overflow-y: auto; }
+  .filter-row {
+    display: flex; align-items: center; gap: 8px; padding: 10px 18px; flex-wrap: wrap;
+    border-bottom: 1px dashed var(--line); background: #FBF8F1;
+  }
+  .filter-row label { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .filter-row select {
+    border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; font-size: 13px;
+    color: var(--ink); background: white;
+  }
+  .movement-row {
+    display: flex; align-items: center; justify-content: space-between; padding: 10px 18px;
+    border-bottom: 1px solid #D7CDBA55;
+  }
+  .movement-row .desc { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .movement-row .meta { font-size: 11.5px; color: var(--ink-soft); }
+  .movement-info { cursor: pointer; }
+  .detail-content { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+  .detail-row { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .detail-row.full { grid-column: 1 / -1; }
+  .detail-row .detail-label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+  .detail-row .detail-value { font-size: 14.5px; color: var(--ink); overflow-wrap: break-word; }
+  .movement-row .amount { font-size: 14px; font-weight: 700; }
+  .movement-row .amount.gasto { color: var(--rust); }
+  .movement-row .amount.aporte { color: var(--sage); }
+  .row-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .icon-btn { background: transparent; border: none; color: var(--ink-soft); cursor: pointer; padding: 4px; display: flex; }
+  .icon-btn.gold { color: var(--gold); }
+  .empty-msg { padding: 18px; color: var(--ink-soft); font-size: 14px; }
+
+  .field-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .field-label-row label { margin-bottom: 0; }
+  .custom-select { position: relative; }
+  .custom-select-btn {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px;
+    background: white; color: var(--ink); cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .custom-select-btn .cs-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .filter-row .custom-select { flex: 1 1 auto; min-width: 150px; }
+  .pager-btn {
+    display: flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+    border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); cursor: pointer;
+  }
+  .pager-btn:disabled { opacity: 0.35; cursor: default; }
+  .custom-select-btn svg { flex-shrink: 0; color: var(--ink-soft); transition: transform 0.15s; }
+  .custom-select.open .custom-select-btn svg { transform: rotate(180deg); }
+  .custom-select-list {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+    background: white; border: 1px solid var(--line); border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(27,42,74,0.12); max-height: 240px; overflow-y: auto; padding: 4px;
+  }
+  .custom-select-list.open { display: block; }
+  .custom-select-option {
+    padding: 3px 10px; font-size: 13.5px; border-radius: 6px; cursor: pointer; line-height: 1.6; color: var(--ink);
+  }
+  .custom-select-option:hover { background: var(--paper2); }
+  .custom-select-option.active { background: var(--gold); color: white; font-weight: 600; }
+  .custom-select.disabled .custom-select-btn { opacity: 0.5; cursor: not-allowed; }
+  .manage-cats-btn {
+    display: flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer;
+    font-size: 11.5px; font-weight: 600; color: var(--gold); padding: 0;
+  }
+  .cats-list { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
+  .cat-row { display: flex; align-items: center; gap: 8px; position: relative; }
+  .cat-row.dragging { z-index: 5; background: var(--paper2); box-shadow: 0 4px 12px rgba(27,42,74,0.18); border-radius: 8px; }
+  .cat-drag-handle:active { cursor: grabbing; }
+  .cat-row input[type="text"] {
+    flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; font-size: 13.5px;
+  }
+  .cat-row button {
+    flex-shrink: 0; background: none; border: none; cursor: pointer; padding: 5px; border-radius: 6px; color: var(--ink-soft);
+  }
+  .cat-row button:hover { background: var(--paper2); }
+  .cat-row button.save-cat-btn { color: var(--sage); }
+  .cat-row button.sugerencias-cat-btn { color: var(--gold); }
+  .cat-row button.delete-cat-btn { color: var(--rust); }
+  .sug-chip {
+    display: inline-flex; align-items: center; gap: 6px; background: #FBF1DD; border: 1px solid var(--gold);
+    color: var(--ink); border-radius: 999px; padding: 5px 6px 5px 12px; font-size: 12.5px;
+  }
+  .sug-chip button { background: none; border: none; color: var(--gold); cursor: pointer; padding: 2px; display: flex; }
+  .reorder-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+  .reorder-btns button { padding: 1px; }
+  .reorder-btns button:disabled { opacity: 0.25; cursor: default; }
+  .reorder-btns button:disabled:hover { background: none; }
+  .cats-add-row { display: flex; gap: 8px; margin-top: 4px; }
+  .cats-add-row input {
+    flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; font-size: 13.5px;
+  }
+  .cats-add-row button {
+    background: var(--ink); color: var(--paper); border: none; border-radius: 7px;
+    padding: 8px 14px; font-weight: 600; font-size: 13px; cursor: pointer; flex-shrink: 0;
+  }
+  #catsSetupNotice {
+    font-size: 12.5px; color: var(--rust); background: #FBEFE9; border: 1px solid #E8CFC0;
+    border-radius: 8px; padding: 10px 12px; line-height: 1.5;
+  }
+  .footer-note { font-size: 12px; color: var(--ink-soft); text-align: center; }
+
+  .tab-nav { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+  .tab-btn {
+    padding: 10px 4px; margin-bottom: -1px; border: none; background: transparent; cursor: pointer;
+    font-size: 14px; font-weight: 600; color: var(--ink-soft); border-bottom: 2px solid transparent;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .donut-row { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  @media (min-width: 720px) { .donut-row { grid-template-columns: 1fr 1fr; } }
+  .donut-card { padding: 18px; }
+  .donut-card h3 { font-size: 15px; margin: 0 0 4px; font-weight: 600; }
+  .donut-card .donut-total { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 10px; }
+  .donut-canvas-wrap { position: relative; height: 220px; }
+  .donut-legend { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+  .donut-legend-item { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; gap: 8px; }
+  .donut-legend-item .swatch-label { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .donut-legend-item .swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .donut-legend-item .cat-name { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .donut-legend-item .cat-amount { font-family: 'JetBrains Mono', monospace; color: var(--ink-soft); flex-shrink: 0; }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(27,42,74,0.45);
+    align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .modal-overlay.open { display: flex; }
+  /* Este modal se abre desde dentro de otro modal (la lista de programados),
+     así que necesita quedar por encima aunque en el HTML aparezca antes. */
+  #progDetailModal { z-index: 60; }
+  .modal-box {
+    background: var(--paper); border-radius: 14px; padding: 20px; max-width: 560px; width: 100%;
+    max-height: 80vh; display: flex; flex-direction: column; gap: 12px;
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  .modal-box h3 { margin: 0; font-size: 17px; font-weight: 600; }
+  .modal-box p { font-size: 12.5px; color: var(--ink-soft); margin: 0; }
+  #csvTextarea {
+    width: 100%; flex: 1; min-height: 220px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; resize: vertical;
+  }
+  #downloadCsvBtn {
+    background: var(--ink); color: var(--paper); border: none; border-radius: 8px;
+    padding: 9px 16px; font-weight: 600; font-size: 13.5px; cursor: pointer;
+  }
+  #copyBtn {
+    background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+    padding: 9px 16px; font-weight: 600; font-size: 13.5px; cursor: pointer;
+  }
+  #copyStatus { font-size: 12.5px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="toast" style="position:fixed; left:50%; bottom:24px; transform:translate(-50%, 20px); opacity:0; pointer-events:none; background:var(--ink); color:var(--paper); padding:10px 20px; border-radius:999px; font-size:13.5px; font-weight:600; display:flex; align-items:center; gap:8px; box-shadow:0 4px 16px rgba(27,42,74,0.25); z-index:100; transition:opacity 0.25s ease, transform 0.25s ease; white-space:nowrap; max-width:92vw; overflow:hidden; text-overflow:ellipsis;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      <span id="toastText">Hecho</span>
+    </div>
+    <header class="top">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FBF8F1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <div>
+          <h1 class="ledger-title">Mis Finanzas</h1>
+          <p>Libro de registro diario</p>
+        </div>
+      </div>
+      <div class="balance-stamp" id="balanceStamp" role="button" tabindex="0" style="cursor:pointer;" title="Toca para mostrar/ocultar">
+        <div class="label">Saldo actual <span id="eyeIcon" style="display:inline-flex; vertical-align:-2px;"></span></div>
+        <div class="value ledger-num" id="balanceValue">0,00 €</div>
+      </div>
+      <div style="position:relative;">
+        <button type="button" id="settingsBtn" aria-label="Ajustes" style="background:white; border:1px solid var(--line); border-radius:10px; width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink);">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <div id="settingsMenu" style="display:none; position:absolute; right:0; top:46px; background:white; border:1px solid var(--line); border-radius:10px; box-shadow:0 6px 18px rgba(27,42,74,0.18); min-width:170px; z-index:40; overflow:hidden;">
+          <button type="button" id="settingsMenuCategorias" style="width:100%; text-align:left; background:none; border:none; padding:12px 14px; font-size:13.5px; color:var(--ink); cursor:pointer; display:flex; align-items:center; gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Categorías
+          </button>
+          <button type="button" id="settingsMenuOtras" style="width:100%; text-align:left; background:none; border:none; padding:12px 14px; font-size:13.5px; color:var(--ink); cursor:pointer; display:flex; align-items:center; gap:8px; border-top:1px solid var(--line);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            Otras
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="modal-overlay" id="otrasModal">
+      <div class="modal-box" style="min-height:auto;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <h3 class="ledger-title">Otras opciones</h3>
+          <button class="icon-btn" id="closeOtrasModal" aria-label="Cerrar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <p style="font-size:12.5px; color:var(--ink-soft); margin:0 0 10px;">Elige qué elementos se muestran en la web. Se recuerda para próximas veces.</p>
+        <div style="font-size:11.5px; color:var(--ink-soft); font-weight:700; text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px;">Gráficos</div>
+        <label style="display:flex; align-items:center; gap:10px; padding:9px 0; cursor:pointer; border-top:1px solid var(--line);">
+          <input type="checkbox" id="toggleGraficoGastos" style="width:18px; height:18px; accent-color:var(--ink);" />
+          <span style="font-size:14px; color:var(--ink);">Gráfico de gastos por categoría</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:9px 0; cursor:pointer; border-top:1px solid var(--line);">
+          <input type="checkbox" id="toggleGraficoAportes" style="width:18px; height:18px; accent-color:var(--ink);" />
+          <span style="font-size:14px; color:var(--ink);">Gráfico de aportes por categoría</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div id="pendientesBanner" style="display:none;"></div>
+
+    <div class="tab-nav">
+      <button type="button" class="tab-btn active" id="tabBtnRegistro">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Registro
+      </button>
+      <button type="button" class="tab-btn" id="tabBtnMovimientos">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Movimientos
+      </button>
+      <button type="button" class="tab-btn" id="tabBtnGraficos">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6.5 3.8"/></svg>
+        Gráficos
+      </button>
+    </div>
+
+    <div class="tab-panel active" id="tabPanelRegistro">
+    <div class="grid-main">
+      <div class="form-row" style="grid-template-columns: 1fr;">
+        <div class="card form-card" id="formCard">
+          <div class="edit-banner" id="editBanner" style="display:none;">
+            <span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+              Editando registro
+            </span>
+            <button class="icon-btn" id="cancelEditBtn" aria-label="Cancelar edición">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="tipo-toggle">
+            <button type="button" class="tipo-btn gasto active" id="btnGasto">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+              Gasto
+            </button>
+            <button type="button" class="tipo-btn aporte" id="btnAporte">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+              Aporte
+            </button>
+          </div>
+
+          <div class="two-col">
+            <div class="field">
+              <label>Fecha</label>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="date" id="fechaInput" style="flex:1; min-width:0;" />
+                <input type="time" id="horaInput" style="width:88px; flex-shrink:0; font-size:12.5px; padding:8px 6px;" />
+              </div>
+            </div>
+            <div class="field">
+              <label>Monto (€)</label>
+              <input type="text" inputmode="decimal" placeholder="0.00" id="montoInput" class="ledger-num" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Categoría</label>
+            <div class="custom-select" id="categoriaSelectWrap">
+              <button type="button" class="custom-select-btn" id="categoriaSelectBtn">
+                <span id="categoriaSelectLabel">Selecciona…</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="custom-select-list" id="categoriaSelectList"></div>
+              <input type="hidden" id="categoriaInput" />
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label-row">
+              <label>Descripción</label>
+              <button type="button" id="toggleNotaBtn" title="Añadir nota" style="background:none; border:none; cursor:pointer; padding:2px 4px; color:var(--ink-soft); font-size:14px; line-height:1; display:flex; align-items:center;">
+                ✏️
+              </button>
+            </div>
+            <input type="text" id="descripcionInput" placeholder="Ej. Compra semanal" list="descSuggestions" />
+            <datalist id="descSuggestions"></datalist>
+            <div id="notaWrap" style="display:none; margin-top:8px;">
+              <label style="display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; font-weight:600; text-transform:uppercase; letter-spacing:0.4px;">Nota (solo visible en el detalle)</label>
+              <textarea id="notaInput" rows="2" placeholder="Ej. Pendiente de devolución, pagado a medias con…" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13.5px; color:var(--ink); background:var(--paper); box-sizing:border-box; resize:vertical; font-family:inherit;"></textarea>
+            </div>
+          </div>
+
+          <div class="field" style="margin-bottom: 0;">
+            <label>Método de pago</label>
+            <select id="metodoInput">
+              <option>Efectivo</option>
+              <option selected>Tarjeta</option>
+              <option>Transferencia</option>
+            </select>
+          </div>
+
+          <button id="submitBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            <span id="submitLabel">Registrar</span>
+          </button>
+        </div>
+
+        <button type="button" id="openProgramadosBtn" style="margin-top:-1px; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:white; border:1px solid var(--line); color:var(--ink); border-radius:9px; padding:10px 0; font-weight:600; font-size:13.5px; cursor:pointer;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14v3"/><path d="M10.5 15.5h3"/></svg>
+          Gastos programados
+        </button>
+      </div>
+    </div>
+    </div>
+
+    <div class="tab-panel" id="tabPanelMovimientos">
+    <div class="grid-main">
+      <div class="summary-row">
+        <p class="rango-indicator" id="summaryRangoIndicator" style="grid-column: 1 / -1;"></p>
+        <div class="card summary-card">
+          <div class="label" style="color: var(--sage);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            Aportes
+          </div>
+          <div class="value ledger-num" id="totalAportes">0,00 €</div>
+        </div>
+        <div class="card summary-card">
+          <div class="label" style="color: var(--rust);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+            Gastos
+          </div>
+          <div class="value ledger-num" id="totalGastos">0,00 €</div>
+        </div>
+      </div>
+
+      <div class="card" style="overflow:hidden;">
+        <div class="ledger-header">
+          <h2 class="ledger-title">Movimientos</h2>
+          <button id="exportBtn" disabled>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV
+          </button>
+        </div>
+        <div class="filter-row">
+          <label for="filterRango" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0);">Mostrar</label>
+          <select id="filterRango">
+            <option value="30">Últimos 30 días</option>
+            <option value="90">Últimos 90 días</option>
+            <option value="365">Último año</option>
+            <option value="all" selected>Todos</option>
+            <option value="custom">Personalizado…</option>
+          </select>
+          <button type="button" id="customRangoBtn" style="display:none; border:1px solid var(--line); border-radius:7px; padding:5px 10px; font-size:12.5px; color:var(--ink); background:white; cursor:pointer; white-space:nowrap;">
+            Elegir fechas
+          </button>
+          <button type="button" id="toggleBuscarBtn" aria-label="Buscar movimientos" title="Buscar movimientos" style="margin-left:auto; border:1px solid var(--line); border-radius:7px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:white; color:var(--ink); cursor:pointer; flex-shrink:0;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </button>
+        </div>
+        <div id="buscarWrap" style="display:none; align-items:center; gap:8px; padding:10px 18px; border-bottom:1px dashed var(--line); background:#FBF8F1;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-soft); flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="buscarInput" placeholder="Buscar por descripción, categoría, nota o monto…" style="flex:1; border:1px solid var(--line); border-radius:7px; padding:6px 10px; font-size:13.5px; color:var(--ink); background:white;" />
+          <button type="button" id="clearBuscarBtn" aria-label="Cerrar búsqueda" style="background:none; border:none; color:var(--ink-soft); cursor:pointer; padding:2px; display:flex; flex-shrink:0;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <div class="movements-list" id="movementsList">
+          <p class="empty-msg">Cargando…</p>
+        </div>
+        <div id="movementsPager" style="display:flex; align-items:center; gap:10px; padding:10px 18px; border-top:1px dashed var(--line);"></div>
+      </div>
+
+      <p class="footer-note" id="footerNote">Cargando estado de conexión…</p>
+    </div>
+    </div>
+
+    <div class="tab-panel" id="tabPanelGraficos">
+      <p class="rango-indicator" id="graficosRangoIndicator" style="margin-bottom: 14px;"></p>
+      <div class="donut-row">
+        <div class="card donut-card" id="cardDonutGasto">
+          <h3 class="ledger-title">Gastos por categoría</h3>
+          <div class="donut-total" id="donutGastoTotal"></div>
+          <div class="donut-canvas-wrap"><canvas id="categoryChart"></canvas></div>
+          <div class="donut-legend" id="donutGastoLegend"></div>
+        </div>
+        <div class="card donut-card" id="cardDonutAporte">
+          <h3 class="ledger-title">Aportes por categoría</h3>
+          <div class="donut-total" id="donutAporteTotal"></div>
+          <div class="donut-canvas-wrap"><canvas id="aporteChart"></canvas></div>
+          <div class="donut-legend" id="donutAporteLegend"></div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:16px 18px; margin-top:16px;">
+        <h3 class="ledger-title" style="margin:0 0 4px;">Previsión de gasto anual</h3>
+        <p style="font-size:12px; color:var(--ink-soft); margin:0 0 12px;">Estimación basada en el gasto medio de los últimos 3 meses (o los que haya).</p>
+        <div class="two-col" style="margin-bottom:0;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Categoría</label>
+            <select id="previsionCategoria"></select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Etiqueta</label>
+            <select id="previsionEtiqueta"></select>
+          </div>
+        </div>
+        <div id="previsionResultado" style="margin-top:14px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="csvModal">
+    <div class="modal-box">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title">Exportar a CSV</h3>
+        <button class="icon-btn" id="closeCsvModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <p>El archivo se ha descargado automáticamente. Si tu navegador lo bloqueó, descárgalo o cópialo desde aquí.</p>
+      <textarea id="csvTextarea" readonly></textarea>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <button id="downloadCsvBtn">Descargar .csv</button>
+        <button id="copyBtn">Copiar al portapapeles</button>
+        <span id="copyStatus"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-box" style="min-height:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title">Detalle del movimiento</h3>
+        <button class="icon-btn" id="closeDetailModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div id="detailContent" class="detail-content"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="progDetailModal">
+    <div class="modal-box" style="min-height:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title">Detalle del gasto programado</h3>
+        <button class="icon-btn" id="closeProgDetailModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div id="progDetailContent" class="detail-content"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="rangoModal">
+    <div class="modal-box" style="min-height:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title">Rango de fechas</h3>
+        <button class="icon-btn" id="closeRangoModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="field" style="margin-bottom:0;">
+          <label>Desde</label>
+          <input type="date" id="customDesde" />
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Hasta</label>
+          <input type="date" id="customHasta" />
+        </div>
+        <button type="button" id="aplicarRangoBtn" style="background:var(--ink); color:var(--paper); border:none; border-radius:9px; padding:10px 0; font-weight:600; font-size:14px; cursor:pointer;">
+          Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="passModal">
+    <div class="modal-box" style="min-height:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title" id="passModalTitle">Introduce tu contraseña</h3>
+        <button class="icon-btn" id="closePassModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <p id="passModalHint" style="font-size:12.5px; color:var(--ink-soft); margin:0;">Para mostrar el saldo, aportes y gastos.</p>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <div class="field" style="margin-bottom:0;">
+          <label id="passInputLabel">Contraseña</label>
+          <input type="password" id="passInput" inputmode="numeric" />
+        </div>
+        <div class="field" id="passConfirmField" style="margin-bottom:0; display:none;">
+          <label>Confirmar contraseña</label>
+          <input type="password" id="passConfirmInput" inputmode="numeric" />
+        </div>
+        <div class="field" id="passKeywordField" style="margin-bottom:0; display:none;">
+          <label>Palabra clave de recuperación</label>
+          <input type="text" id="passKeywordInput" placeholder="Algo que recuerdes fácilmente" />
+        </div>
+        <span id="passError" style="font-size:12px; color:var(--rust); display:none;"></span>
+        <button type="button" id="passSubmitBtn" style="background:var(--ink); color:var(--paper); border:none; border-radius:9px; padding:10px 0; font-weight:600; font-size:14px; cursor:pointer;">
+          Confirmar
+        </button>
+        <button type="button" id="passForgotBtn" style="background:none; border:none; color:var(--ink-soft); font-size:11.5px; text-decoration:underline; cursor:pointer; padding:2px;">
+          Olvidé mi contraseña, restablecerla
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="catsModal">
+    <div class="modal-box">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title">Editar categorías</h3>
+        <button class="icon-btn" id="closeCatsModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="tipo-toggle" id="catsTipoToggle">
+        <button type="button" class="tipo-btn gasto active" id="catsBtnGasto">Gasto</button>
+        <button type="button" class="tipo-btn aporte" id="catsBtnAporte">Aporte</button>
+      </div>
+
+      <p id="catsSetupNotice" style="display:none;"></p>
+
+      <div class="cats-list" id="catsList"></div>
+
+      <div class="cats-add-row">
+        <input type="text" id="newCatInput" placeholder="Nueva categoría…" />
+        <button type="button" id="addCatBtn">Añadir</button>
+      </div>
+      <span id="catsStatus" style="font-size:12px; color: var(--ink-soft);"></span>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="catDeleteModal">
+    <div class="modal-box" style="min-height:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title">Eliminar categoría</h3>
+        <button class="icon-btn" id="closeCatDeleteModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <p id="catDeleteWarning" style="font-size:13.5px; color:var(--ink); margin:0 0 12px;"></p>
+      <div class="field" style="margin-bottom:0;">
+        <label>¿Qué hacer con esos movimientos?</label>
+        <select id="catReasignarInput"></select>
+      </div>
+      <span id="catDeleteStatus" style="font-size:12px; color:var(--ink-soft); display:block; margin-top:8px;"></span>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button type="button" id="cancelCatDeleteBtn" style="flex:1; background:white; border:1px solid var(--line); color:var(--ink); border-radius:9px; padding:10px 0; font-weight:600; font-size:13.5px; cursor:pointer;">Cancelar</button>
+        <button type="button" id="confirmCatDeleteBtn" style="flex:1; background:var(--rust); color:white; border:none; border-radius:9px; padding:10px 0; font-weight:600; font-size:13.5px; cursor:pointer;">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="sugerenciasModal">
+    <div class="modal-box" style="min-height:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title" id="sugerenciasModalTitle">Sugerencias</h3>
+        <button class="icon-btn" id="closeSugerenciasModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <p style="font-size:12.5px; color:var(--ink-soft); margin:0 0 10px;">
+        Textos que aparecerán como sugerencia al escribir la descripción con esta categoría (ej. "Mercadona", "Alimerka" para Comida).
+      </p>
+      <div id="sugerenciasChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="nuevaSugerenciaInput" placeholder="Ej. Mercadona" style="flex:1; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:14px;" />
+        <button type="button" id="addSugerenciaBtn" style="background:var(--ink); color:var(--paper); border:none; border-radius:8px; padding:0 16px; font-weight:600; font-size:13.5px; cursor:pointer;">Añadir</button>
+      </div>
+      <span id="sugerenciasStatus" style="font-size:12px; color:var(--ink-soft); display:block; margin-top:8px;"></span>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="programadosModal">
+    <div class="modal-box">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title">Gastos programados</h3>
+        <button class="icon-btn" id="closeProgramadosModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div id="programadosList" style="display:flex; flex-direction:column; gap:8px;"></div>
+      <button type="button" id="newProgramadoBtn" style="margin-top:12px; background:var(--ink); color:var(--paper); border:none; border-radius:9px; padding:9px 0; font-weight:600; font-size:13.5px; cursor:pointer;">
+        + Nuevo gasto programado
+      </button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="programadoFormModal">
+    <div class="modal-box">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title" id="programadoFormTitle">Nuevo gasto programado</h3>
+        <button class="icon-btn" id="closeProgramadoFormModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div class="field" style="margin-bottom:0;">
+          <div class="field-label-row" style="display:flex; align-items:center; justify-content:space-between;">
+            <label>Nombre</label>
+            <button type="button" id="toggleProgNotaBtn" title="Añadir nota" style="background:none; border:none; cursor:pointer; padding:2px 4px; color:var(--ink-soft); font-size:14px; line-height:1; display:flex; align-items:center;">
+              ✏️
+            </button>
+          </div>
+          <input type="text" id="progNombreInput" placeholder="Ej. Hipoteca, Netflix…" />
+        </div>
+        <div id="progNotaWrap" style="display:none;">
+          <label style="display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; font-weight:600; text-transform:uppercase; letter-spacing:0.4px;">Nota (solo visible en el detalle)</label>
+          <textarea id="progNotaInput" rows="2" placeholder="Ej. Pendiente de devolución, pagado a medias con…" style="width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13.5px; color:var(--ink); background:var(--paper); box-sizing:border-box; resize:vertical; font-family:inherit;"></textarea>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Categoría</label>
+          <select id="progCategoriaInput"></select>
+        </div>
+        <div class="two-col">
+          <div class="field" style="margin-bottom:0;">
+            <label>Monto (€)</label>
+            <input type="text" inputmode="decimal" id="progMontoInput" class="ledger-num" placeholder="0.00" />
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Método de pago</label>
+            <select id="progMetodoInput">
+              <option>Efectivo</option>
+              <option selected>Tarjeta</option>
+              <option>Transferencia</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Frecuencia</label>
+          <select id="progFrecuenciaInput">
+            <option value="mensual" selected>Mensual</option>
+            <option value="anual">Anual</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Fecha de inicio</label>
+          <input type="date" id="progFechaInicioInput" />
+          <span style="font-size:11px; color:var(--ink-soft); display:block; margin-top:3px;">De aquí se toma el día (y el mes, si es anual) como referencia.</span>
+        </div>
+        <div id="progFechaFinRow">
+          <button type="button" id="toggleProgFechaFinBtn" style="background:none; border:none; cursor:pointer; padding:0; color:var(--ink-soft); font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:5px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Añadir fecha de fin
+          </button>
+        </div>
+        <div class="field" id="progFechaFinWrap" style="display:none; margin-bottom:0;">
+          <div class="field-label-row" style="display:flex; align-items:center; justify-content:space-between;">
+            <label>Fecha de fin (opcional)</label>
+            <button type="button" id="quitarProgFechaFinBtn" style="background:none; border:none; cursor:pointer; padding:2px 4px; color:var(--rust); font-size:11.5px; font-weight:600;">Quitar</button>
+          </div>
+          <input type="date" id="progFechaFinInput" />
+          <span style="font-size:11px; color:var(--ink-soft); display:block; margin-top:3px;">A partir de esta fecha, este gasto dejará de registrarse.</span>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Hora de registro</label>
+          <input type="time" id="progHoraInput" value="08:00" />
+        </div>
+        <span id="progError" style="font-size:12px; color:var(--rust); display:none;"></span>
+        <button type="button" id="progSaveBtn" style="background:var(--ink); color:var(--paper); border:none; border-radius:9px; padding:10px 0; font-weight:600; font-size:14px; cursor:pointer;">
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="progBackfillConfirmModal">
+    <div class="modal-box" style="min-height:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title">Fecha de inicio anterior a hoy</h3>
+        <button class="icon-btn" id="closeProgBackfillModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <p id="progBackfillWarning" style="font-size:13.5px; color:var(--ink); margin:0;"></p>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button type="button" id="modificarProgBackfillBtn" style="flex:1; background:white; border:1px solid var(--line); color:var(--ink); border-radius:9px; padding:10px 0; font-weight:600; font-size:13.5px; cursor:pointer;">Modificar fecha</button>
+        <button type="button" id="confirmProgBackfillBtn" style="flex:1; background:var(--gold); color:white; border:none; border-radius:9px; padding:10px 0; font-weight:600; font-size:13.5px; cursor:pointer;">Aceptar y registrar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const SUPABASE_URL = "https://izmtpbdmtzhjpwxzgicr.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6bXRwYmRtdHpoanB3eHpnaWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MTA2NDgsImV4cCI6MjEwMDM4NjY0OH0.eSEnVSn9yKI-q6Juoi-ot-8PuVpY0zuivBi2D7zqq4Q";
+  const TABLE_URL = SUPABASE_URL + "/rest/v1/movimientos";
+  const SB_HEADERS = {
+    apikey: SUPABASE_KEY,
+    Authorization: "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json",
+  };
+
+  const DEFAULT_GASTO_CATS = ["Comida", "Transporte", "Vivienda", "Servicios", "Salud", "Educación", "Ocio y entretenimiento", "Ropa", "Ahorro", "Otros gastos"];
+  const DEFAULT_APORTE_CATS = ["Sueldo", "Freelance", "Bonos/Extras", "Regalos recibidos", "Reembolsos", "Intereses/Inversiones", "Otros aportes"];
+  const CATEGORIAS_URL = SUPABASE_URL + "/rest/v1/categorias";
+  const COLORS = { rust: "#A6543A", sage: "#4F7A5C", gold: "#B98A2F", ink: "#1B2A4A", inkSoft: "#4A5A78", line: "#D7CDBA" };
+  const DONUT_PALETTE = ["#A6543A", "#4F7A5C", "#B98A2F", "#1B2A4A", "#7C9A92", "#C97B4A", "#5B7A9D", "#8A6BA6", "#B2555F", "#6B8E4E"];
+
+  let entries = [];
+  let editingId = null;
+  let montosOcultos = true;
+  let tipo = "Gasto";
+  let categoryChart = null;
+  let aporteChart = null;
+  let rangoFiltro = "all";
+  let categorias = { Gasto: [], Aporte: [] }; // [{id, nombre}]
+  let categoriasPersistidas = false; // true si la tabla 'categorias' existe en Supabase
+  let catsModalTipo = "Gasto";
+  let catDeletePendiente = null;
+  let legendExpandida = {};
+  let chartLoadPromise = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("fallo al cargar " + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  // Si el CDN principal (cargado en el <head>) no llegó a definir "Chart",
+  // se intenta con CDNs alternativos antes de rendirse.
+  function ensureChartLoaded() {
+    if (typeof Chart !== "undefined") return Promise.resolve(true);
+    if (chartLoadPromise) return chartLoadPromise;
+    const fallbacks = [
+      "https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js",
+      "https://unpkg.com/chart.js@4.4.4/dist/chart.umd.min.js",
+    ];
+    chartLoadPromise = (async () => {
+      for (const src of fallbacks) {
+        try {
+          await loadScript(src);
+          if (typeof Chart !== "undefined") return true;
+        } catch (e) { /* probar el siguiente CDN */ }
+      }
+      return typeof Chart !== "undefined";
+    })();
+    return chartLoadPromise;
+  }
+
+  // --- Supabase REST helpers ---
+  async function fetchEntries() {
+    const res = await fetch(TABLE_URL + "?select=*&order=fecha.asc,hora.asc,id.asc", { headers: SB_HEADERS });
+    if (!res.ok) throw new Error("fetch failed: " + res.status + " " + (await res.text()));
+    const rows = await res.json();
+    return rows.map((r) => ({ id: r.id, fecha: r.fecha, hora: r.hora, tipo: r.tipo, categoria: r.categoria, descripcion: r.descripcion, monto: Number(r.monto), metodo: r.metodo, nota: r.nota || "" }));
+  }
+  async function insertEntry(entry) {
+    const res = await fetch(TABLE_URL, {
+      method: "POST",
+      headers: { ...SB_HEADERS, Prefer: "return=representation" },
+      body: JSON.stringify({ fecha: entry.fecha, hora: entry.hora, tipo: entry.tipo, categoria: entry.categoria, descripcion: entry.descripcion, monto: entry.monto, metodo: entry.metodo, nota: entry.nota || null }),
+    });
+    if (!res.ok) throw new Error("insert failed: " + res.status + " " + (await res.text()));
+  }
+  async function updateEntryRemote(id, entry) {
+    const res = await fetch(TABLE_URL + "?id=eq." + id, {
+      method: "PATCH",
+      headers: SB_HEADERS,
+      body: JSON.stringify({ fecha: entry.fecha, hora: entry.hora, tipo: entry.tipo, categoria: entry.categoria, descripcion: entry.descripcion, monto: entry.monto, metodo: entry.metodo, nota: entry.nota || null }),
+    });
+    if (!res.ok) throw new Error("update failed: " + res.status + " " + (await res.text()));
+  }
+  async function deleteEntryRemote(id) {
+    const res = await fetch(TABLE_URL + "?id=eq." + id, { method: "DELETE", headers: SB_HEADERS });
+    if (!res.ok) throw new Error("delete failed: " + res.status + " " + (await res.text()));
+  }
+
+  // --- Categorías (Supabase) ---
+  async function fetchCategorias() {
+    try {
+      const res = await fetch(CATEGORIAS_URL + "?select=*&order=tipo.asc,orden.asc,nombre.asc", { headers: SB_HEADERS });
+      if (!res.ok) throw new Error(String(res.status));
+      const rows = await res.json();
+      if (rows.length === 0) throw new Error("empty");
+      categorias.Gasto = rows.filter((r) => r.tipo === "Gasto").map((r) => ({ id: r.id, nombre: r.nombre, orden: r.orden, sugerencias: r.sugerencias || [] }));
+      categorias.Aporte = rows.filter((r) => r.tipo === "Aporte").map((r) => ({ id: r.id, nombre: r.nombre, orden: r.orden, sugerencias: r.sugerencias || [] }));
+      categoriasPersistidas = true;
+    } catch (e) {
+      categorias.Gasto = DEFAULT_GASTO_CATS.map((n) => ({ id: null, nombre: n }));
+      categorias.Aporte = DEFAULT_APORTE_CATS.map((n) => ({ id: null, nombre: n }));
+      categoriasPersistidas = false;
+    }
+  }
+  async function insertCategoria(tipoSel, nombre) {
+    const maxOrden = Math.max(0, ...(categorias[tipoSel] || []).map((c) => c.orden || 0));
+    const res = await fetch(CATEGORIAS_URL, {
+      method: "POST",
+      headers: { ...SB_HEADERS, Prefer: "return=representation" },
+      body: JSON.stringify({ tipo: tipoSel, nombre, orden: maxOrden + 1 }),
+    });
+    if (!res.ok) throw new Error("insert failed: " + res.status + " " + (await res.text()));
+    const rows = await res.json();
+    return rows[0];
+  }
+  async function renameCategoriaRemote(id, nombre) {
+    const res = await fetch(CATEGORIAS_URL + "?id=eq." + id, {
+      method: "PATCH",
+      headers: SB_HEADERS,
+      body: JSON.stringify({ nombre }),
+    });
+    if (!res.ok) throw new Error("update failed: " + res.status + " " + (await res.text()));
+  }
+  async function setSugerenciasCategoriaRemote(id, sugerencias) {
+    const res = await fetch(CATEGORIAS_URL + "?id=eq." + id, {
+      method: "PATCH",
+      headers: SB_HEADERS,
+      body: JSON.stringify({ sugerencias }),
+    });
+    if (!res.ok) throw new Error("update failed: " + res.status + " " + (await res.text()));
+  }
+  async function setOrdenCategoriaRemote(id, orden) {
+    const res = await fetch(CATEGORIAS_URL + "?id=eq." + id, {
+      method: "PATCH",
+      headers: SB_HEADERS,
+      body: JSON.stringify({ orden }),
+    });
+    if (!res.ok) throw new Error("update failed: " + res.status + " " + (await res.text()));
+  }
+  async function deleteCategoriaRemote(id) {
+    const res = await fetch(CATEGORIAS_URL + "?id=eq." + id, { method: "DELETE", headers: SB_HEADERS });
+    if (!res.ok) throw new Error("delete failed: " + res.status + " " + (await res.text()));
+  }
+
+  // --- Gastos programados (Supabase) ---
+  const PROGRAMADOS_URL = SUPABASE_URL + "/rest/v1/gastos_programados";
+  let programados = [];
+
+  async function fetchProgramados() {
+    const res = await fetch(PROGRAMADOS_URL + "?select=*&order=proxima_fecha.asc", { headers: SB_HEADERS });
+    if (!res.ok) throw new Error("fetch programados failed: " + res.status);
+    programados = await res.json();
+  }
+  async function insertProgramado(p) {
+    const res = await fetch(PROGRAMADOS_URL, {
+      method: "POST",
+      headers: { ...SB_HEADERS, Prefer: "return=representation" },
+      body: JSON.stringify(p),
+    });
+    if (!res.ok) throw new Error("insert programado failed: " + res.status + " " + (await res.text()));
+  }
+  async function updateProgramado(id, p) {
+    const res = await fetch(PROGRAMADOS_URL + "?id=eq." + id, {
+      method: "PATCH",
+      headers: SB_HEADERS,
+      body: JSON.stringify(p),
+    });
+    if (!res.ok) throw new Error("update programado failed: " + res.status + " " + (await res.text()));
+  }
+  async function deleteProgramadoRemote(id) {
+    const res = await fetch(PROGRAMADOS_URL + "?id=eq." + id, { method: "DELETE", headers: SB_HEADERS });
+    if (!res.ok) throw new Error("delete programado failed: " + res.status);
+  }
+
+  function daysInMonth(y, m) {
+    return new Date(y, m, 0).getDate();
+  }
+  function makeDateISO(y, m, d) {
+    d = Math.min(d, daysInMonth(y, m));
+    return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  }
+  function nextOccurrence(frecuencia, dia, mes, afterISO, inclusive) {
+    const [ay, am] = afterISO.split("-").map(Number);
+    if (frecuencia === "mensual") {
+      let y = ay, m = am;
+      let candidate = makeDateISO(y, m, dia);
+      if (inclusive ? candidate < afterISO : candidate <= afterISO) {
+        m += 1;
+        if (m > 12) { m = 1; y += 1; }
+        candidate = makeDateISO(y, m, dia);
+      }
+      return candidate;
+    }
+    let y = ay;
+    let candidate = makeDateISO(y, mes, dia);
+    if (inclusive ? candidate < afterISO : candidate <= afterISO) {
+      y += 1;
+      candidate = makeDateISO(y, mes, dia);
+    }
+    return candidate;
+  }
+
+  function generarOcurrenciasBackfill(frecuencia, dia, mes, desdeISO, hastaISO) {
+    const fechas = [];
+    let actual = desdeISO;
+    let guard = 0;
+    while (actual <= hastaISO && guard < 600) {
+      fechas.push(actual);
+      guard++;
+      actual = nextOccurrence(frecuencia, dia, mes, actual, false);
+    }
+    return fechas;
+  }
+
+  function pendientesProgramados() {
+    const today = todayISO();
+    return programados.filter((p) => p.activo && p.proxima_fecha <= today && (!p.fecha_fin || p.proxima_fecha <= p.fecha_fin));
+  }
+
+  function renderPendientesBanner() {
+    const pendientes = pendientesProgramados();
+    const banner = $("pendientesBanner");
+    if (pendientes.length === 0) {
+      banner.style.display = "none";
+      banner.innerHTML = "";
+      return;
+    }
+    banner.style.display = "block";
+    banner.innerHTML = `
+      <div class="card" style="border-color:var(--gold); padding:12px 16px; margin-bottom:14px;">
+        <div style="font-size:12.5px; font-weight:700; color:var(--gold); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Gastos programados pendientes de confirmar
+        </div>
+        ${pendientes.map((p) => `
+          <div class="pendiente-row" data-id="${p.id}" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; border-top:1px dashed var(--line);">
+            <div style="min-width:0;">
+              <div style="font-size:13.5px; font-weight:600;">${escapeHtml(p.nombre)}</div>
+              <div style="font-size:11.5px; color:var(--ink-soft);">${p.proxima_fecha} · ${escapeHtml(p.categoria)} · ${(p.tipo === "Gasto" ? "−" : "+") + fmtMoney(Number(p.monto))}</div>
+            </div>
+            <div style="display:flex; gap:6px; flex-shrink:0;">
+              <button type="button" class="pendiente-confirmar-btn" style="background:var(--sage); color:white; border:none; border-radius:7px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer;">Confirmar</button>
+              <button type="button" class="pendiente-descartar-btn" style="background:transparent; color:var(--ink-soft); border:1px solid var(--line); border-radius:7px; padding:6px 10px; font-size:12px; cursor:pointer;">Descartar</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    banner.querySelectorAll(".pendiente-confirmar-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.closest(".pendiente-row").dataset.id;
+        const p = programados.find((x) => x.id === id);
+        if (!p) return;
+        btn.disabled = true;
+        try {
+          await insertEntry({ fecha: p.proxima_fecha, hora: p.hora, tipo: p.tipo, categoria: p.categoria, descripcion: p.nombre, monto: Number(p.monto), metodo: p.metodo, nota: p.nota || "" });
+          const siguiente = nextOccurrence(p.frecuencia, p.dia, p.mes, p.proxima_fecha, false);
+          const seAcabo = p.fecha_fin && siguiente > p.fecha_fin;
+          await updateProgramado(id, seAcabo ? { proxima_fecha: siguiente, activo: false } : { proxima_fecha: siguiente });
+          await fetchProgramados();
+          await refreshAndRender();
+          renderProgramadosList();
+          renderPendientesBanner();
+          if (seAcabo) showToast(`"${p.nombre}" ha llegado a su fecha de fin y se ha desactivado.`);
+        } catch (e) {
+          showError("No se pudo confirmar: " + e.message);
+        }
+      });
+    });
+    banner.querySelectorAll(".pendiente-descartar-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.closest(".pendiente-row").dataset.id;
+        const p = programados.find((x) => x.id === id);
+        if (!p) return;
+        btn.disabled = true;
+        try {
+          const siguiente = nextOccurrence(p.frecuencia, p.dia, p.mes, p.proxima_fecha, false);
+          const seAcabo = p.fecha_fin && siguiente > p.fecha_fin;
+          await updateProgramado(id, seAcabo ? { proxima_fecha: siguiente, activo: false } : { proxima_fecha: siguiente });
+          await fetchProgramados();
+          renderProgramadosList();
+          renderPendientesBanner();
+          if (seAcabo) showToast(`"${p.nombre}" ha llegado a su fecha de fin y se ha desactivado.`);
+        } catch (e) {
+          showError("No se pudo descartar: " + e.message);
+        }
+      });
+    });
+  }
+
+  async function renameCategoriaEnMovimientos(tipoSel, nombreAnterior, nombreNuevo) {
+    const res = await fetch(TABLE_URL + "?tipo=eq." + encodeURIComponent(tipoSel) + "&categoria=eq." + encodeURIComponent(nombreAnterior), {
+      method: "PATCH",
+      headers: SB_HEADERS,
+      body: JSON.stringify({ categoria: nombreNuevo }),
+    });
+    if (!res.ok) throw new Error("update failed: " + res.status + " " + (await res.text()));
+  }
+  async function contarMovimientosPorCategoria(tipoSel, nombre) {
+    const res = await fetch(
+      TABLE_URL + "?tipo=eq." + encodeURIComponent(tipoSel) + "&categoria=eq." + encodeURIComponent(nombre) + "&select=id",
+      { headers: { ...SB_HEADERS, Prefer: "count=exact" } }
+    );
+    if (!res.ok) return 0;
+    const rows = await res.json();
+    return rows.length;
+  }
+
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+  function nowHHMM() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+  let rangoDesde = "";
+  let rangoHasta = "";
+
+  function cutoffISO(days) {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return d.toISOString().slice(0, 10);
+  }
+  let categoriaFiltro = null; // { tipo, categoria } | null
+  let textoBusqueda = "";
+
+  function normalizarTexto(s) {
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function coincideBusqueda(e) {
+    if (!textoBusqueda) return true;
+    const q = normalizarTexto(textoBusqueda);
+    const campos = [e.descripcion, e.categoria, e.nota, e.metodo, String(e.monto).replace(".", ",")];
+    return campos.some((campo) => normalizarTexto(campo).includes(q));
+  }
+
+  function enRango(fecha) {
+    if (rangoFiltro === "all") return true;
+    if (rangoFiltro === "custom") {
+      if (rangoDesde && fecha < rangoDesde) return false;
+      if (rangoHasta && fecha > rangoHasta) return false;
+      return true;
+    }
+    return fecha >= cutoffISO(Number(rangoFiltro));
+  }
+  function filteredEntries() {
+    return entries.filter((e) => enRango(e.fecha));
+  }
+  function getFilteredWithBalance() {
+    return computeWithBalance().filter((e) => {
+      if (!enRango(e.fecha)) return false;
+      if (categoriaFiltro && (e.tipo !== categoriaFiltro.tipo || e.categoria !== categoriaFiltro.categoria)) return false;
+      if (!coincideBusqueda(e)) return false;
+      return true;
+    });
+  }
+  function rangoLabel() {
+    if (rangoFiltro === "custom") return "personalizado_" + (rangoDesde || "inicio") + "_a_" + (rangoHasta || "fin");
+    return { "30": "ultimos-30-dias", "90": "ultimos-90-dias", "365": "ultimo-anio", all: "todos" }[rangoFiltro];
+  }
+  function rangoTexto() {
+    if (rangoFiltro === "custom") {
+      if (rangoDesde && rangoHasta) return `Del ${rangoDesde} al ${rangoHasta}`;
+      if (rangoDesde) return `Desde ${rangoDesde}`;
+      if (rangoHasta) return `Hasta ${rangoHasta}`;
+      return "Personalizado";
+    }
+    return { "30": "Últimos 30 días", "90": "Últimos 90 días", "365": "Último año", all: "Todos" }[rangoFiltro];
+  }
+  function metodoAbbrev(m) {
+    return m === "Transferencia" ? "Transfer." : m;
+  }
+
+  function fmtMoney(n) {
+    return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(n || 0);
+  }
+  function parseMonto(raw) {
+    if (typeof raw !== "string") return NaN;
+    return parseFloat(raw.trim().replace(",", "."));
+  }
+  function showError(msg) {
+    const box = $("errorBox");
+    if (!msg) { box.style.display = "none"; box.textContent = ""; return; }
+    box.textContent = msg;
+    box.style.display = "block";
+  }
+
+  // --- Selector genérico: convierte cualquier <select> al estilo de "Categoría" ---
+  function crearSelectorPersonalizado(select) {
+    if (select._csWrap) { refrescarSelectorPersonalizado(select); return; }
+    select.style.display = "none";
+
+    const wrap = document.createElement("div");
+    wrap.className = "custom-select";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "custom-select-btn";
+    btn.innerHTML = `<span class="cs-label"></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+    const list = document.createElement("div");
+    list.className = "custom-select-list";
+    wrap.appendChild(btn);
+    wrap.appendChild(list);
+    select.insertAdjacentElement("afterend", wrap);
+
+    select._csWrap = wrap;
+    select._csBtn = btn;
+    select._csList = list;
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (select.disabled) return;
+      document.querySelectorAll(".custom-select.open").forEach((w) => { if (w !== wrap) w.classList.remove("open"); });
+      document.querySelectorAll(".custom-select-list.open").forEach((l) => { if (l !== list) l.classList.remove("open"); });
+      list.classList.toggle("open");
+      wrap.classList.toggle("open");
+    });
+
+    refrescarSelectorPersonalizado(select);
+  }
+
+  function refrescarSelectorPersonalizado(select) {
+    const wrap = select._csWrap;
+    if (!wrap) return;
+    const btn = select._csBtn, list = select._csList;
+    list.innerHTML = Array.from(select.options).map((o) =>
+      `<div class="custom-select-option${o.value === select.value ? " active" : ""}" data-value="${escapeHtml(o.value)}">${escapeHtml(o.textContent)}</div>`
+    ).join("");
+    const selectedOpt = select.options[select.selectedIndex];
+    btn.querySelector(".cs-label").textContent = selectedOpt ? selectedOpt.textContent : "";
+    wrap.classList.toggle("disabled", !!select.disabled);
+    list.querySelectorAll(".custom-select-option").forEach((opt) => {
+      opt.addEventListener("click", () => {
+        select.value = opt.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        // Reflejar la selección al instante: antes solo se actualizaba el
+        // <select> interno, y el botón visible se quedaba con la etiqueta
+        // antigua hasta el próximo refrescarSelectorPersonalizado() completo.
+        btn.querySelector(".cs-label").textContent = opt.textContent;
+        list.querySelectorAll(".custom-select-option").forEach((o) => o.classList.toggle("active", o === opt));
+        list.classList.remove("open");
+        wrap.classList.remove("open");
+      });
+    });
+  }
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".custom-select-list.open").forEach((l) => l.classList.remove("open"));
+    document.querySelectorAll(".custom-select.open").forEach((w) => w.classList.remove("open"));
+  });
+
+  function setCategoriaSeleccionada(nombre) {
+    $("categoriaInput").value = nombre || "";
+    $("categoriaSelectLabel").textContent = nombre || "Selecciona…";
+    $("categoriaSelectList").querySelectorAll(".custom-select-option").forEach((o) => {
+      o.classList.toggle("active", o.dataset.value === nombre);
+    });
+    updateDescSuggestions(nombre);
+  }
+  function updateDescSuggestions(nombreCategoria) {
+    const cats = categorias[tipo] || [];
+    const c = cats.find((x) => x.nombre === nombreCategoria);
+    const sugerencias = (c && c.sugerencias) || [];
+    $("descSuggestions").innerHTML = sugerencias.map((s) => `<option value="${escapeHtml(s)}"></option>`).join("");
+  }
+  function closeCategoriaSelect() {
+    $("categoriaSelectList").classList.remove("open");
+    $("categoriaSelectWrap").classList.remove("open");
+  }
+  function populateCategorias() {
+    const cats = categorias[tipo] || [];
+    const list = $("categoriaSelectList");
+    list.innerHTML = cats.map((c) => `<div class="custom-select-option" data-value="${escapeHtml(c.nombre)}">${escapeHtml(c.nombre)}</div>`).join("");
+    list.querySelectorAll(".custom-select-option").forEach((opt) => {
+      opt.addEventListener("click", () => {
+        setCategoriaSeleccionada(opt.dataset.value);
+        closeCategoriaSelect();
+      });
+    });
+    const current = $("categoriaInput").value;
+    const stillValid = cats.some((c) => c.nombre === current);
+    setCategoriaSeleccionada(stillValid ? current : (cats[0] ? cats[0].nombre : ""));
+  }
+
+  function setTipo(t) {
+    tipo = t;
+    $("btnGasto").classList.toggle("active", t === "Gasto");
+    $("btnAporte").classList.toggle("active", t === "Aporte");
+    populateCategorias();
+  }
+
+  function resetForm() {
+    editingId = null;
+    setTipo("Gasto");
+    $("fechaInput").value = todayISO();
+    $("horaInput").value = nowHHMM();
+    $("montoInput").value = "";
+    $("descripcionInput").value = "";
+    $("metodoInput").value = "Tarjeta";
+    $("notaInput").value = "";
+    $("notaWrap").style.display = "none";
+    $("formCard").classList.remove("editing");
+    $("editBanner").style.display = "none";
+    $("submitBtn").classList.remove("editing-mode");
+    $("submitLabel").textContent = "Registrar";
+    showError(null);
+  }
+
+  function startEdit(entry) {
+    editingId = entry.id;
+    setTipo(entry.tipo);
+    $("fechaInput").value = entry.fecha;
+    $("horaInput").value = entry.hora ? entry.hora.slice(0, 5) : nowHHMM();
+    setCategoriaSeleccionada(entry.categoria);
+    $("descripcionInput").value = entry.descripcion;
+    $("montoInput").value = String(entry.monto);
+    $("metodoInput").value = entry.metodo;
+    $("notaInput").value = entry.nota || "";
+    $("notaWrap").style.display = entry.nota ? "block" : "none";
+    $("formCard").classList.add("editing");
+    $("editBanner").style.display = "flex";
+    $("submitBtn").classList.add("editing-mode");
+    $("submitLabel").textContent = "Guardar cambios";
+    showError(null);
+    switchTab("registro");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function refreshAndRender() {
+    try {
+      entries = await fetchEntries();
+      $("footerNote").textContent = 'Tus datos se guardan en tu base de datos (Supabase) y estarán disponibles siempre que abras esta página.';
+    } catch (e) {
+      $("footerNote").textContent = 'No se pudo conectar con la base de datos (' + e.message + '). Revisa tu conexión a internet y recarga la página.';
+    }
+    render();
+  }
+
+  function showToast(msg) {
+    const toast = $("toast");
+    $("toastText").textContent = msg || "Hecho";
+    toast.style.opacity = "1";
+    toast.style.transform = "translate(-50%, 0)";
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transform = "translate(-50%, 20px)";
+    }, 1800);
+  }
+
+  async function autoAddSugerenciaSiNueva(tipoEntry, categoriaEntry, descripcionEntry) {
+    if (!descripcionEntry || descripcionEntry === categoriaEntry) return;
+    const cat = (categorias[tipoEntry] || []).find((c) => c.nombre === categoriaEntry);
+    if (!cat || !cat.id) return;
+    const yaExiste = (cat.sugerencias || []).some((s) => s.toLowerCase() === descripcionEntry.toLowerCase());
+    if (yaExiste) return;
+    try {
+      const nuevas = [...(cat.sugerencias || []), descripcionEntry];
+      await setSugerenciasCategoriaRemote(cat.id, nuevas);
+      cat.sugerencias = nuevas;
+    } catch (e) {
+      // no crítico: si falla, simplemente no se añade la sugerencia esta vez
+    }
+  }
+
+  async function saveEntry() {
+    const val = parseMonto($("montoInput").value);
+    if (!val || val <= 0) {
+      showError("Ingresa un monto válido mayor que 0 (ej. 12.50).");
+      return;
+    }
+    const categoria = $("categoriaInput").value;
+    const descripcion = $("descripcionInput").value.trim() || categoria;
+    const fecha = $("fechaInput").value || todayISO();
+    const hora = $("horaInput").value || nowHHMM();
+    const metodo = $("metodoInput").value;
+    const nota = $("notaInput").value.trim();
+    const entry = { fecha, hora, tipo, categoria, descripcion, monto: val, metodo, nota };
+    showError(null);
+    $("submitBtn").disabled = true;
+    try {
+      if (editingId) {
+        await updateEntryRemote(editingId, entry);
+      } else {
+        await insertEntry(entry);
+      }
+    } catch (err) {
+      showError("No se pudo guardar: " + err.message);
+      $("submitBtn").disabled = false;
+      return;
+    }
+    // El registro ya se guardó; si falla el refresco/gráficos, no se muestra como error de guardado.
+    const wasEditing = !!editingId;
+    try {
+      await autoAddSugerenciaSiNueva(tipo, categoria, descripcion);
+      await refreshAndRender();
+      resetForm();
+      showToast(wasEditing ? "Cambios guardados" : "Hecho");
+    } catch (err) {
+      console.warn("Guardado correcto, pero falló el refresco de la vista:", err);
+    } finally {
+      $("submitBtn").disabled = false;
+    }
+  }
+
+  async function removeEntry(id) {
+    try {
+      await deleteEntryRemote(id);
+      if (editingId === id) resetForm();
+      await refreshAndRender();
+    } catch (err) {
+      showError("No se pudo eliminar: " + err.message);
+    }
+  }
+
+  function computeWithBalance() {
+    const sorted = [...entries].sort((a, b) => {
+      if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
+      const ha = a.hora || "00:00";
+      const hb = b.hora || "00:00";
+      return ha < hb ? -1 : ha > hb ? 1 : 0;
+    });
+    let saldo = 0;
+    return sorted.map((e) => {
+      saldo += e.tipo === "Aporte" ? e.monto : -e.monto;
+      return { ...e, saldo };
+    });
+  }
+
+  function csvText(withBalance) {
+    const header = ["Fecha", "Tipo", "Categoría", "Descripción", "Monto", "Método de pago", "Saldo acumulado"];
+    const rows = withBalance.map((e) => [e.fecha, e.tipo, e.categoria, e.descripcion, e.monto.toFixed(2), e.metodo, e.saldo.toFixed(2)]);
+    return [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  }
+
+  const MOVS_POR_PAGINA = 10;
+  let paginaActual = 1;
+  let mostrarTodosMovs = false;
+
+  function renderMovementsPager(totalPaginas, totalRegistros) {
+    const pager = $("movementsPager");
+    if (mostrarTodosMovs) {
+      pager.innerHTML = `
+        <span style="font-size:12px; color:var(--ink-soft);">Mostrando los ${totalRegistros} movimientos</span>
+        <button type="button" id="pagerVolverBtn" style="background:none; border:none; color:var(--ink); text-decoration:underline; font-size:12px; cursor:pointer; padding:0;">Ver por páginas</button>
+      `;
+      $("pagerVolverBtn").addEventListener("click", () => { mostrarTodosMovs = false; paginaActual = 1; render(); });
+      return;
+    }
+    pager.innerHTML = `
+      <button type="button" id="pagerPrevBtn" class="pager-btn" ${paginaActual <= 1 ? "disabled" : ""} aria-label="Anterior">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span style="font-size:12px; color:var(--ink-soft);">Página ${paginaActual} de ${totalPaginas}</span>
+      <button type="button" id="pagerNextBtn" class="pager-btn" ${paginaActual >= totalPaginas ? "disabled" : ""} aria-label="Siguiente">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button type="button" id="pagerTodosBtn" style="background:none; border:none; color:var(--ink); text-decoration:underline; font-size:12px; cursor:pointer; padding:0; margin-left:auto;">Mostrar todos</button>
+    `;
+    const prev = $("pagerPrevBtn"), next = $("pagerNextBtn");
+    if (prev) prev.addEventListener("click", () => { if (paginaActual > 1) { paginaActual--; render(); } });
+    if (next) next.addEventListener("click", () => { if (paginaActual < totalPaginas) { paginaActual++; render(); } });
+    $("pagerTodosBtn").addEventListener("click", () => { mostrarTodosMovs = true; render(); });
+  }
+
+  function render() {
+    const visible = getFilteredWithBalance();
+    const rangoParts = [];
+    if (rangoFiltro !== "all") rangoParts.push("Rango: " + rangoTexto());
+    if (categoriaFiltro) rangoParts.push("Categoría: " + categoriaFiltro.categoria);
+    if (textoBusqueda) rangoParts.push(`Búsqueda: "${textoBusqueda}"`);
+    const rangoTxt = rangoParts.join(" · ");
+    const clearBtn = categoriaFiltro ? ' <button type="button" id="clearCatFiltroBtn" style="background:none; border:none; color:var(--rust); text-decoration:underline; cursor:pointer; font-size:inherit; padding:0;">Quitar categoría</button>' : "";
+    $("summaryRangoIndicator").innerHTML = rangoTxt + clearBtn;
+    $("graficosRangoIndicator").textContent = rangoFiltro === "all" ? "" : "Filtrado: " + rangoTexto();
+    const clearBtnEl = $("clearCatFiltroBtn");
+    if (clearBtnEl) clearBtnEl.addEventListener("click", () => { categoriaFiltro = null; paginaActual = 1; render(); });
+
+    const gasto = visible.filter((e) => e.tipo === "Gasto").reduce((s, e) => s + e.monto, 0);
+    const aporte = visible.filter((e) => e.tipo === "Aporte").reduce((s, e) => s + e.monto, 0);
+    const balance = aporte - gasto;
+
+    const maskMoney = (str) => str.replace(/[0-9]/g, "*");
+    $("totalAportes").textContent = montosOcultos ? maskMoney(fmtMoney(aporte)) : fmtMoney(aporte);
+    $("totalGastos").textContent = montosOcultos ? maskMoney(fmtMoney(gasto)) : fmtMoney(gasto);
+    $("balanceValue").textContent = montosOcultos ? maskMoney(fmtMoney(balance)) : fmtMoney(balance);
+    $("balanceStamp").classList.toggle("negative", balance < 0);
+    $("eyeIcon").innerHTML = montosOcultos
+      ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>'
+      : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+
+    $("exportBtn").disabled = visible.length === 0;
+
+    const list = $("movementsList");
+
+    if (entries.length === 0) {
+      list.innerHTML = '<p class="empty-msg">Aún no hay movimientos registrados. Añade el primero arriba.</p>';
+      $("movementsPager").innerHTML = "";
+    } else if (visible.length === 0) {
+      list.innerHTML = textoBusqueda
+        ? `<p class="empty-msg">Sin resultados para "${textoBusqueda}".</p>`
+        : '<p class="empty-msg">No hay movimientos en este rango de fechas.</p>';
+      $("movementsPager").innerHTML = "";
+    } else {
+      const ordenados = [...visible].reverse();
+      const totalPaginas = Math.max(1, Math.ceil(ordenados.length / MOVS_POR_PAGINA));
+      if (mostrarTodosMovs) paginaActual = 1;
+      if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+      const pagina = mostrarTodosMovs
+        ? ordenados
+        : ordenados.slice((paginaActual - 1) * MOVS_POR_PAGINA, paginaActual * MOVS_POR_PAGINA);
+
+      list.innerHTML = pagina.map((e) => `
+        <div class="movement-row" data-id="${e.id}">
+          <div class="movement-info" style="min-width:0;">
+            <div class="desc">${escapeHtml(e.descripcion)}${e.nota ? ' <span title="Tiene nota" style="display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--gold); vertical-align:middle;"></span>' : ""}</div>
+            <div class="meta">${e.fecha} · ${escapeHtml(e.categoria)} · ${escapeHtml(metodoAbbrev(e.metodo))}</div>
+          </div>
+          <div class="row-actions">
+            <span class="amount ledger-num ${e.tipo === "Gasto" ? "gasto" : "aporte"}">${e.tipo === "Gasto" ? "−" : "+"}${fmtMoney(e.monto)}</span>
+            <button class="icon-btn edit-btn" aria-label="Editar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            </button>
+            <button class="icon-btn delete-btn" aria-label="Eliminar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+      `).join("");
+
+      list.querySelectorAll(".edit-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.closest(".movement-row").dataset.id;
+          startEdit(entries.find((e) => e.id === id));
+        });
+      });
+      list.querySelectorAll(".delete-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.closest(".movement-row").dataset.id;
+          removeEntry(id);
+        });
+      });
+      list.querySelectorAll(".movement-info").forEach((el) => {
+        el.addEventListener("click", () => {
+          const id = el.closest(".movement-row").dataset.id;
+          showDetail(entries.find((e) => e.id === id));
+        });
+      });
+
+      renderMovementsPager(totalPaginas, ordenados.length);
+    }
+
+    // Los donuts solo se dibujan si la pestaña de gráficos está visible;
+    // así siempre se generan con datos frescos y con el canvas correctamente medido.
+    if ($("tabPanelGraficos").classList.contains("active")) {
+      renderDonuts();
+    }
+  }
+
+  function buildCategoryTotals(tipoFiltro) {
+    const byCategory = {};
+    filteredEntries().filter((e) => e.tipo === tipoFiltro).forEach((e) => {
+      byCategory[e.categoria] = (byCategory[e.categoria] || 0) + e.monto;
+    });
+    return Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+  }
+
+  function renderDonutLegend(elId, tipoSel, catEntries, total) {
+    const el = $(elId);
+    if (catEntries.length === 0) {
+      el.innerHTML = '';
+      return;
+    }
+    const LIMITE = 3;
+    const expandido = legendExpandida[elId] === true;
+    const visibles = expandido ? catEntries : catEntries.slice(0, LIMITE);
+
+    const filaHtml = (c, i) => {
+      const pct = total > 0 ? Math.round((c[1] / total) * 100) : 0;
+      const activa = categoriaFiltro && categoriaFiltro.tipo === tipoSel && categoriaFiltro.categoria === c[0];
+      return `
+        <div class="donut-legend-item legend-clickable" data-categoria="${escapeHtml(c[0])}" style="cursor:pointer; ${activa ? "font-weight:700;" : ""}">
+          <span class="swatch-label">
+            <span class="swatch" style="background:${DONUT_PALETTE[i % DONUT_PALETTE.length]}"></span>
+            <span class="cat-name">${escapeHtml(c[0])}</span>
+          </span>
+          <span class="cat-amount">${fmtMoney(c[1])} · ${pct}%</span>
+        </div>`;
+    };
+
+    el.innerHTML = visibles.map((c, i) => filaHtml(c, i)).join("") +
+      (catEntries.length > LIMITE
+        ? `<button type="button" class="legend-toggle-btn" style="background:none; border:none; color:var(--ink-soft); text-decoration:underline; font-size:12px; cursor:pointer; padding:6px 0 0; display:block;">${expandido ? "Ver menos" : `Ver más (${catEntries.length - LIMITE})`}</button>`
+        : "");
+
+    el.querySelectorAll(".legend-clickable").forEach((row) => {
+      row.addEventListener("click", () => {
+        const categoria = row.dataset.categoria;
+        toggleCategoriaFiltro(tipoSel, categoria);
+      });
+    });
+    const toggleBtn = el.querySelector(".legend-toggle-btn");
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", () => {
+        legendExpandida[elId] = !expandido;
+        renderDonutLegend(elId, tipoSel, catEntries, total);
+      });
+    }
+  }
+
+  function toggleCategoriaFiltro(tipoSel, categoria) {
+    if (categoriaFiltro && categoriaFiltro.tipo === tipoSel && categoriaFiltro.categoria === categoria) {
+      categoriaFiltro = null;
+    } else {
+      categoriaFiltro = { tipo: tipoSel, categoria };
+    }
+    paginaActual = 1;
+    render();
+    switchTab("movimientos");
+  }
+
+  function drawDonut(canvasId, existingChart, tipoSel, catEntries) {
+    const ctx = $(canvasId).getContext("2d");
+    if (existingChart) existingChart.destroy();
+    if (catEntries.length === 0) return null;
+    return new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: catEntries.map((c) => c[0]),
+        datasets: [{
+          data: catEntries.map((c) => Math.round(c[1] * 100) / 100),
+          backgroundColor: catEntries.map((c, i) => DONUT_PALETTE[i % DONUT_PALETTE.length]),
+          borderColor: "#FFFFFF",
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "62%",
+        onClick: (evt, elements) => {
+          if (!elements.length) return;
+          const categoria = catEntries[elements[0].index][0];
+          toggleCategoriaFiltro(tipoSel, categoria);
+        },
+        onHover: (evt, elements) => {
+          evt.native.target.style.cursor = elements.length ? "pointer" : "default";
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${fmtMoney(ctx.parsed)}` } },
+        },
+      },
+    });
+  }
+
+  async function renderDonuts() {
+    const ok = await ensureChartLoaded();
+    if (!ok) {
+      const msg = '<p class="empty-msg">No se pudo cargar la librería de gráficos. Revisa tu conexión a internet o desactiva temporalmente el bloqueador de anuncios y recarga la página.</p>';
+      $("donutGastoLegend").innerHTML = msg;
+      $("donutAporteLegend").innerHTML = "";
+      $("donutGastoTotal").textContent = "";
+      $("donutAporteTotal").textContent = "";
+      return;
+    }
+    try {
+      const gastoCats = buildCategoryTotals("Gasto");
+      const aporteCats = buildCategoryTotals("Aporte");
+      const gastoTotal = gastoCats.reduce((s, c) => s + c[1], 0);
+      const aporteTotal = aporteCats.reduce((s, c) => s + c[1], 0);
+
+      $("donutGastoTotal").textContent = gastoCats.length ? "Total: " + fmtMoney(gastoTotal) : "Sin gastos registrados";
+      $("donutAporteTotal").textContent = aporteCats.length ? "Total: " + fmtMoney(aporteTotal) : "Sin aportes registrados";
+
+      categoryChart = drawDonut("categoryChart", categoryChart, "Gasto", gastoCats);
+      aporteChart = drawDonut("aporteChart", aporteChart, "Aporte", aporteCats);
+
+      renderDonutLegend("donutGastoLegend", "Gasto", gastoCats, gastoTotal);
+      renderDonutLegend("donutAporteLegend", "Aporte", aporteCats, aporteTotal);
+    } catch (e) {
+      console.warn("No se pudieron dibujar los gráficos:", e);
+    }
+  }
+
+  const TODAS = "__TODAS__";
+
+  function poblarPrevisionCategorias() {
+    const sel = $("previsionCategoria");
+    const valActual = sel.value;
+    const cats = categorias.Gasto || [];
+    sel.innerHTML = `<option value="${TODAS}">Todas</option>` +
+      cats.map((c) => `<option value="${escapeHtml(c.nombre)}">${escapeHtml(c.nombre)}</option>`).join("");
+    sel.value = cats.some((c) => c.nombre === valActual) ? valActual : TODAS;
+    crearSelectorPersonalizado(sel);
+    poblarPrevisionEtiquetas();
+  }
+
+  function poblarPrevisionEtiquetas() {
+    const catSel = $("previsionCategoria").value;
+    const etSel = $("previsionEtiqueta");
+    if (catSel === TODAS) {
+      etSel.innerHTML = `<option value="${TODAS}">Todas las etiquetas</option>`;
+      etSel.disabled = true;
+    } else {
+      etSel.disabled = false;
+      const etiquetas = Array.from(new Set(
+        entries.filter((e) => e.tipo === "Gasto" && e.categoria === catSel).map((e) => e.descripcion)
+      )).sort((a, b) => a.localeCompare(b));
+      etSel.innerHTML = `<option value="${TODAS}">Todas las de esta categoría</option>` +
+        etiquetas.map((et) => `<option value="${escapeHtml(et)}">${escapeHtml(et)}</option>`).join("");
+    }
+    etSel.value = TODAS;
+    crearSelectorPersonalizado(etSel);
+    calcularYMostrarPrevision();
+  }
+
+  function calcularPrevisionAnual(categoriaSel, etiquetaSel) {
+    let relevantes = entries.filter((e) => e.tipo === "Gasto");
+    if (categoriaSel !== TODAS) relevantes = relevantes.filter((e) => e.categoria === categoriaSel);
+    if (categoriaSel !== TODAS && etiquetaSel !== TODAS) relevantes = relevantes.filter((e) => e.descripcion === etiquetaSel);
+    if (relevantes.length === 0) return null;
+
+    const hoy = new Date();
+    const cutoff = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
+    const cutoffISO = cutoff.toISOString().slice(0, 10);
+
+    const fechasOrdenadas = relevantes.map((e) => e.fecha).sort();
+    const primeraFecha = new Date(fechasOrdenadas[0]);
+    const mesesDeHistoria = (hoy.getFullYear() - primeraFecha.getFullYear()) * 12 + (hoy.getMonth() - primeraFecha.getMonth()) + 1;
+    const mesesAConsiderar = Math.max(1, Math.min(3, mesesDeHistoria));
+
+    const ventana = relevantes.filter((e) => e.fecha >= cutoffISO);
+    const totalVentana = ventana.reduce((s, e) => s + e.monto, 0);
+    const promedioMensual = totalVentana / mesesAConsiderar;
+
+    return { promedioMensual, anual: promedioMensual * 12, meses: mesesAConsiderar, registros: ventana.length };
+  }
+
+  function calcularYMostrarPrevision() {
+    const categoriaSel = $("previsionCategoria").value;
+    const etiquetaSel = $("previsionEtiqueta").value;
+    const res = calcularPrevisionAnual(categoriaSel, etiquetaSel);
+    const el = $("previsionResultado");
+    if (!res) {
+      el.innerHTML = `<p style="font-size:13px; color:var(--ink-soft); margin:0;">No hay registros de gasto para calcular una previsión.</p>`;
+      return;
+    }
+    el.innerHTML = `
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 12px;">
+          <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--ink-soft); font-weight:700;">Media mensual</div>
+          <div class="ledger-num" style="font-size:18px; font-weight:700; color:var(--ink);">${fmtMoney(res.promedioMensual)}</div>
+        </div>
+        <div style="flex:1; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 12px;">
+          <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--ink-soft); font-weight:700;">Previsión anual</div>
+          <div class="ledger-num" style="font-size:18px; font-weight:700; color:var(--rust);">${fmtMoney(res.anual)}</div>
+        </div>
+      </div>
+      <p style="font-size:11.5px; color:var(--ink-soft); margin:8px 0 0;">Calculado sobre ${res.meses} ${res.meses === 1 ? "mes" : "meses"} de historial (${res.registros} movimiento${res.registros === 1 ? "" : "s"}).</p>
+    `;
+  }
+
+  $("previsionCategoria").addEventListener("change", poblarPrevisionEtiquetas);
+  $("previsionEtiqueta").addEventListener("change", calcularYMostrarPrevision);
+
+  function switchTab(tab) {
+    $("tabPanelRegistro").classList.toggle("active", tab === "registro");
+    $("tabPanelMovimientos").classList.toggle("active", tab === "movimientos");
+    $("tabPanelGraficos").classList.toggle("active", tab === "graficos");
+    $("tabBtnRegistro").classList.toggle("active", tab === "registro");
+    $("tabBtnMovimientos").classList.toggle("active", tab === "movimientos");
+    $("tabBtnGraficos").classList.toggle("active", tab === "graficos");
+    if (tab === "graficos") { renderDonuts(); poblarPrevisionCategorias(); }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Wire up static controls
+  $("tabBtnRegistro").addEventListener("click", () => switchTab("registro"));
+  $("tabBtnMovimientos").addEventListener("click", () => switchTab("movimientos"));
+  function fmtFechaCorta(iso) {
+    if (!iso) return "";
+    const [y, m, d] = iso.split("-");
+    return `${d}/${m}/${y}`;
+  }
+  function updateCustomRangoBtnLabel() {
+    const btn = $("customRangoBtn");
+    if (rangoDesde && rangoHasta) btn.textContent = `${fmtFechaCorta(rangoDesde)} – ${fmtFechaCorta(rangoHasta)}`;
+    else btn.textContent = "Elegir fechas";
+  }
+
+  let passModalMode = "verify"; // "verify" | "create" | "recover" | "reset"
+
+  function openPassModal(mode) {
+    passModalMode = mode;
+    $("passInput").value = "";
+    $("passConfirmInput").value = "";
+    $("passKeywordInput").value = "";
+    $("passError").style.display = "none";
+    if (mode === "verify") {
+      $("passModalTitle").textContent = "Introduce tu contraseña";
+      $("passModalHint").textContent = "Para mostrar el saldo, aportes y gastos.";
+      $("passInputLabel").textContent = "Contraseña";
+      $("passConfirmField").style.display = "none";
+      $("passKeywordField").style.display = "none";
+      $("passForgotBtn").style.display = "block";
+      $("passInput").type = "password";
+      $("passInput").inputMode = "numeric";
+    } else if (mode === "recover") {
+      $("passModalTitle").textContent = "Recuperar acceso";
+      $("passModalHint").textContent = "Escribe tu palabra clave de recuperación para crear una nueva contraseña.";
+      $("passInputLabel").textContent = "Palabra clave de recuperación";
+      $("passConfirmField").style.display = "none";
+      $("passKeywordField").style.display = "none";
+      $("passForgotBtn").style.display = "none";
+      $("passInput").type = "text";
+      $("passInput").inputMode = "text";
+    } else {
+      // create or reset
+      $("passModalTitle").textContent = mode === "reset" ? "Crea una nueva contraseña" : "Crea una contraseña";
+      $("passModalHint").textContent = "Se pedirá cada vez que quieras mostrar el saldo, aportes y gastos en este dispositivo.";
+      $("passInputLabel").textContent = "Nueva contraseña";
+      $("passConfirmField").style.display = "block";
+      $("passKeywordField").style.display = "block";
+      $("passForgotBtn").style.display = "none";
+      $("passInput").type = "password";
+      $("passInput").inputMode = "numeric";
+    }
+    $("passModal").classList.add("open");
+    setTimeout(() => $("passInput").focus(), 50);
+  }
+  function closePassModal() {
+    $("passModal").classList.remove("open");
+  }
+
+  function toggleMontosOcultos() {
+    if (!montosOcultos) {
+      // hiding again never requires a password
+      montosOcultos = true;
+      render();
+      return;
+    }
+    const storedPass = localStorage.getItem("mf_pass");
+    openPassModal(storedPass ? "verify" : "create");
+  }
+  $("balanceStamp").addEventListener("click", toggleMontosOcultos);
+  $("balanceStamp").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleMontosOcultos(); }
+  });
+
+  $("closePassModal").addEventListener("click", closePassModal);
+  $("passModal").addEventListener("click", (e) => { if (e.target === $("passModal")) closePassModal(); });
+  $("passForgotBtn").addEventListener("click", () => {
+    const storedKeyword = localStorage.getItem("mf_keyword");
+    openPassModal(storedKeyword ? "recover" : "reset");
+  });
+
+  $("passSubmitBtn").addEventListener("click", () => {
+    const val = $("passInput").value;
+    if (passModalMode === "verify") {
+      const storedPass = localStorage.getItem("mf_pass");
+      if (val === storedPass) {
+        montosOcultos = false;
+        closePassModal();
+        render();
+      } else {
+        $("passError").textContent = "Contraseña incorrecta.";
+        $("passError").style.display = "block";
+      }
+    } else if (passModalMode === "recover") {
+      const storedKeyword = localStorage.getItem("mf_keyword");
+      if (val.trim().toLowerCase() === (storedKeyword || "").trim().toLowerCase()) {
+        openPassModal("reset");
+      } else {
+        $("passError").textContent = "Palabra clave incorrecta.";
+        $("passError").style.display = "block";
+      }
+    } else {
+      const confirmVal = $("passConfirmInput").value;
+      const keywordVal = $("passKeywordInput").value.trim();
+      if (!val) {
+        $("passError").textContent = "Escribe una contraseña.";
+        $("passError").style.display = "block";
+        return;
+      }
+      if (val !== confirmVal) {
+        $("passError").textContent = "Las contraseñas no coinciden.";
+        $("passError").style.display = "block";
+        return;
+      }
+      if (!keywordVal) {
+        $("passError").textContent = "Escribe una palabra clave de recuperación.";
+        $("passError").style.display = "block";
+        return;
+      }
+      localStorage.setItem("mf_pass", val);
+      localStorage.setItem("mf_keyword", keywordVal);
+      montosOcultos = false;
+      closePassModal();
+      render();
+    }
+  });
+  $("passInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && $("passConfirmField").style.display === "none") $("passSubmitBtn").click();
+  });
+  $("passConfirmInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("passSubmitBtn").click();
+  });
+
+  function openPicker(input) {
+    try {
+      if (input.showPicker) input.showPicker();
+      else input.focus();
+    } catch (e) {
+      input.focus();
+    }
+  }
+
+  $("toggleBuscarBtn").addEventListener("click", () => {
+    const wrap = $("buscarWrap");
+    const mostrando = wrap.style.display !== "none";
+    if (mostrando) {
+      wrap.style.display = "none";
+      if (textoBusqueda) {
+        textoBusqueda = "";
+        $("buscarInput").value = "";
+        paginaActual = 1;
+        render();
+      }
+    } else {
+      wrap.style.display = "flex";
+      $("buscarInput").focus();
+    }
+  });
+  $("clearBuscarBtn").addEventListener("click", () => {
+    $("buscarWrap").style.display = "none";
+    if (textoBusqueda) {
+      textoBusqueda = "";
+      $("buscarInput").value = "";
+      paginaActual = 1;
+      render();
+    }
+  });
+  let buscarDebounce = null;
+  $("buscarInput").addEventListener("input", (e) => {
+    clearTimeout(buscarDebounce);
+    const valor = e.target.value;
+    buscarDebounce = setTimeout(() => {
+      textoBusqueda = valor.trim();
+      paginaActual = 1;
+      render();
+    }, 200);
+  });
+
+  $("filterRango").addEventListener("change", (e) => {
+    rangoFiltro = e.target.value; paginaActual = 1;
+    $("customRangoBtn").style.display = rangoFiltro === "custom" ? "inline-block" : "none";
+    if (rangoFiltro === "custom") {
+      updateCustomRangoBtnLabel();
+      $("customDesde").value = rangoDesde;
+      $("customHasta").value = rangoHasta;
+      $("movementsList").style.display = "none";
+      $("rangoModal").classList.add("open");
+      openPicker($("customDesde"));
+    } else {
+      closeRangoModalAndRestoreList();
+    }
+    render();
+  });
+  $("customRangoBtn").addEventListener("click", () => {
+    $("customDesde").value = rangoDesde;
+    $("customHasta").value = rangoHasta;
+    $("movementsList").style.display = "none";
+    $("rangoModal").classList.add("open");
+  });
+  function closeRangoModalAndRestoreList() {
+    $("rangoModal").classList.remove("open");
+    $("movementsList").style.display = "";
+  }
+  $("closeRangoModal").addEventListener("click", closeRangoModalAndRestoreList);
+  $("rangoModal").addEventListener("click", (e) => { if (e.target === $("rangoModal")) closeRangoModalAndRestoreList(); });
+  $("customDesde").addEventListener("change", (e) => {
+    $("customHasta").min = e.target.value || "";
+  });
+  $("aplicarRangoBtn").addEventListener("click", () => {
+    rangoDesde = $("customDesde").value;
+    rangoHasta = $("customHasta").value;
+    if (rangoDesde && rangoHasta && rangoHasta < rangoDesde) {
+      showError("La fecha 'hasta' no puede ser anterior a 'desde'.");
+      return;
+    }
+    updateCustomRangoBtnLabel();
+    closeRangoModalAndRestoreList();
+    paginaActual = 1;
+    render();
+  });
+  $("tabBtnGraficos").addEventListener("click", () => switchTab("graficos"));
+  $("btnGasto").addEventListener("click", () => setTipo("Gasto"));
+  $("btnAporte").addEventListener("click", () => setTipo("Aporte"));
+  $("cancelEditBtn").addEventListener("click", resetForm);
+  $("submitBtn").addEventListener("click", saveEntry);
+
+  function downloadCsvFile() {
+    const text = csvText(getFilteredWithBalance());
+    const fecha = todayISO();
+    // BOM para que Excel detecte UTF-8 y muestre bien los acentos/€
+    const blob = new Blob(["\ufeff" + text], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `movimientos_${rangoLabel()}_${fecha}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function showDetail(entry) {
+    if (!entry) return;
+    const rows = [
+      ["Descripción", entry.descripcion || "—"],
+      ["Fecha", entry.fecha],
+      ["Hora", entry.hora ? entry.hora.slice(0, 5) : "—"],
+      ["Tipo", entry.tipo],
+      ["Categoría", entry.categoria],
+      ["Monto", (entry.tipo === "Gasto" ? "−" : "+") + fmtMoney(entry.monto)],
+      ["Método de pago", entry.metodo],
+    ];
+    if (entry.nota) rows.push(["Nota", entry.nota]);
+    const anchoCompleto = new Set(["Descripción", "Nota"]);
+    $("detailContent").innerHTML = rows.map(([label, value]) => `
+      <div class="detail-row${anchoCompleto.has(label) ? " full" : ""}">
+        <span class="detail-label">${escapeHtml(label)}</span>
+        <span class="detail-value">${escapeHtml(String(value))}</span>
+      </div>
+    `).join("");
+    $("detailModal").classList.add("open");
+  }
+  $("closeDetailModal").addEventListener("click", () => $("detailModal").classList.remove("open"));
+  $("detailModal").addEventListener("click", (e) => { if (e.target === $("detailModal")) $("detailModal").classList.remove("open"); });
+
+  function showProgDetail(p) {
+    if (!p) return;
+    const rows = [
+      ["Nombre", p.nombre],
+      ["Tipo", p.tipo],
+      ["Categoría", p.categoria],
+      ["Monto", (p.tipo === "Gasto" ? "−" : "+") + fmtMoney(Number(p.monto))],
+      ["Método de pago", p.metodo],
+      ["Frecuencia", frecuenciaTexto(p)],
+      ["Hora de registro", p.hora ? p.hora.slice(0, 5) : "08:00"],
+      ["Estado", p.activo ? "Activo" : "Finalizado"],
+    ];
+    if (p.fecha_fin) rows.push([p.activo ? "Fecha de fin" : "Finalizó", fmtFechaCorta(p.fecha_fin)]);
+    rows.push([p.activo ? "Próxima fecha" : "Última fecha programada", p.proxima_fecha]);
+    if (p.nota) rows.push(["Nota", p.nota]);
+    const anchoCompleto = new Set(["Nombre", "Nota"]);
+    $("progDetailContent").innerHTML = rows.map(([label, value]) => `
+      <div class="detail-row${anchoCompleto.has(label) ? " full" : ""}">
+        <span class="detail-label">${escapeHtml(label)}</span>
+        <span class="detail-value">${escapeHtml(String(value))}</span>
+      </div>
+    `).join("");
+    $("progDetailModal").classList.add("open");
+  }
+  $("closeProgDetailModal").addEventListener("click", () => $("progDetailModal").classList.remove("open"));
+  $("progDetailModal").addEventListener("click", (e) => { if (e.target === $("progDetailModal")) $("progDetailModal").classList.remove("open"); });
+
+  // --- Gestor de categorías ---
+  function attachCatDragHandlers(list) {
+    let dragEl = null;
+    let dragIndex = -1;
+    let newIndex = -1;
+    let rowHeight = 0;
+    let startY = 0;
+    let pointerId = null;
+
+    function getRows() {
+      return Array.from(list.querySelectorAll(".cat-row"));
+    }
+
+    function onPointerMove(e) {
+      if (!dragEl) return;
+      const dy = e.clientY - startY;
+      dragEl.style.transform = `translateY(${dy}px)`;
+      const rows = getRows();
+      const steps = Math.round(dy / rowHeight);
+      newIndex = Math.min(rows.length - 1, Math.max(0, dragIndex + steps));
+      rows.forEach((r, i) => {
+        if (r === dragEl) return;
+        let shift = 0;
+        if (dragIndex < newIndex && i > dragIndex && i <= newIndex) shift = -1;
+        else if (dragIndex > newIndex && i < dragIndex && i >= newIndex) shift = 1;
+        r.style.transform = shift ? `translateY(${shift * rowHeight}px)` : "";
+      });
+    }
+
+    async function onPointerUp() {
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+      if (!dragEl) return;
+      dragEl.classList.remove("dragging");
+      try { dragEl.releasePointerCapture(pointerId); } catch (e) {}
+      const rows = getRows();
+      rows.forEach((r) => { r.style.transition = ""; r.style.transform = ""; });
+
+      if (newIndex !== dragIndex && newIndex >= 0) {
+        $("catsStatus").textContent = "Guardando orden…";
+        try {
+          const arr = (categorias[catsModalTipo] || []).slice();
+          const [moved] = arr.splice(dragIndex, 1);
+          arr.splice(newIndex, 0, moved);
+          await Promise.all(arr.map((c, i) => setOrdenCategoriaRemote(c.id, i + 1)));
+          await fetchCategorias();
+          renderCatsModalList();
+          populateCategorias();
+          $("catsStatus").textContent = "";
+        } catch (e) {
+          $("catsStatus").textContent = "No se pudo guardar el orden: " + e.message;
+        }
+      }
+      dragEl = null;
+    }
+
+    list.querySelectorAll(".cat-drag-handle").forEach((handle) => {
+      handle.addEventListener("pointerdown", (e) => {
+        const row = handle.closest(".cat-row");
+        if (!row) return;
+        e.preventDefault();
+        const rows = getRows();
+        dragEl = row;
+        dragIndex = rows.indexOf(row);
+        newIndex = dragIndex;
+        rowHeight = row.getBoundingClientRect().height + 8;
+        startY = e.clientY;
+        pointerId = e.pointerId;
+        dragEl.classList.add("dragging");
+        try { dragEl.setPointerCapture(pointerId); } catch (err) {}
+        rows.forEach((r) => { r.style.transition = "transform 0.15s ease"; });
+        document.addEventListener("pointermove", onPointerMove);
+        document.addEventListener("pointerup", onPointerUp);
+      });
+    });
+  }
+
+  function renderCatsModalList() {
+    const list = $("catsList");
+    const cats = categorias[catsModalTipo] || [];
+    const notice = $("catsSetupNotice");
+    if (!categoriasPersistidas) {
+      notice.style.display = "block";
+      notice.textContent = "Para añadir, renombrar o eliminar categorías necesitas crear la tabla \"categorias\" en tu proyecto Supabase (SQL compartido aparte). Ejecútalo una vez y recarga la página. Por ahora estas son las categorías por defecto, de solo lectura.";
+    } else {
+      notice.style.display = "none";
+    }
+    $("addCatBtn").disabled = !categoriasPersistidas;
+    $("newCatInput").disabled = !categoriasPersistidas;
+
+    if (cats.length === 0) {
+      list.innerHTML = '<p class="empty-msg">Sin categorías.</p>';
+      return;
+    }
+
+    list.innerHTML = cats.map((c, i) => `
+      <div class="cat-row" data-id="${c.id || ""}" data-nombre="${escapeHtml(c.nombre)}" data-index="${i}">
+        ${categoriasPersistidas ? `
+          <span class="cat-drag-handle" aria-label="Arrastrar para reordenar" style="cursor:grab; touch-action:none; color:var(--ink-soft); display:flex; align-items:center; flex-shrink:0; padding:4px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>
+          </span>
+        ` : ""}
+        <input type="text" value="${escapeHtml(c.nombre)}" ${categoriasPersistidas ? "" : "disabled"} />
+        ${categoriasPersistidas ? `
+          <button type="button" class="save-cat-btn" aria-label="Guardar cambio">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </button>
+          <button type="button" class="sugerencias-cat-btn" aria-label="Sugerencias de descripción" title="Sugerencias de descripción" style="position:relative;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.83Z"/><circle cx="7.5" cy="7.5" r="1"/></svg>
+            ${c.sugerencias && c.sugerencias.length ? `<span style="position:absolute; top:-2px; right:-2px; width:7px; height:7px; border-radius:50%; background:var(--gold);"></span>` : ""}
+          </button>
+          <button type="button" class="delete-cat-btn" aria-label="Eliminar categoría">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        ` : ""}
+      </div>
+    `).join("");
+
+    if (!categoriasPersistidas) return;
+
+    attachCatDragHandlers(list);
+
+    list.querySelectorAll(".sugerencias-cat-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const row = btn.closest(".cat-row");
+        const c = cats.find((x) => x.id === row.dataset.id);
+        if (c) openSugerenciasModal(c);
+      });
+    });
+
+    list.querySelectorAll(".save-cat-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const row = btn.closest(".cat-row");
+        const id = row.dataset.id;
+        const oldNombre = row.dataset.nombre;
+        const newNombre = row.querySelector("input").value.trim();
+        if (!newNombre || newNombre === oldNombre) return;
+        $("catsStatus").textContent = "Guardando…";
+        try {
+          await renameCategoriaRemote(id, newNombre);
+          await renameCategoriaEnMovimientos(catsModalTipo, oldNombre, newNombre);
+          await fetchCategorias();
+          renderCatsModalList();
+          populateCategorias();
+          await refreshAndRender();
+          $("catsStatus").textContent = "Categoría renombrada.";
+        } catch (e) {
+          $("catsStatus").textContent = "No se pudo guardar: " + e.message;
+        }
+      });
+    });
+    list.querySelectorAll(".delete-cat-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const row = btn.closest(".cat-row");
+        const id = row.dataset.id;
+        const nombre = row.dataset.nombre;
+        const count = await contarMovimientosPorCategoria(catsModalTipo, nombre);
+        if (count === 0) {
+          if (!confirm(`¿Eliminar la categoría "${nombre}"?`)) return;
+          $("catsStatus").textContent = "Eliminando…";
+          try {
+            await deleteCategoriaRemote(id);
+            await fetchCategorias();
+            renderCatsModalList();
+            populateCategorias();
+            $("catsStatus").textContent = "Categoría eliminada.";
+          } catch (e) {
+            $("catsStatus").textContent = "No se pudo eliminar: " + e.message;
+          }
+          return;
+        }
+        abrirCatDeleteModal(id, nombre, count);
+      });
+    });
+  }
+
+  function abrirCatDeleteModal(id, nombre, count) {
+    catDeletePendiente = { id, nombre };
+    $("catDeleteWarning").textContent = `Hay ${count} movimiento${count === 1 ? "" : "s"} con la categoría "${nombre}". Elige qué hacer con ellos antes de eliminarla.`;
+    const otras = (categorias[catsModalTipo] || []).filter((c) => c.nombre !== nombre);
+    const sel = $("catReasignarInput");
+    sel.innerHTML = `<option value="">Dejar el texto "${escapeHtml(nombre)}" tal cual (sin categoría real)</option>` +
+      otras.map((c) => `<option value="${escapeHtml(c.nombre)}">Reasignar a "${escapeHtml(c.nombre)}"</option>`).join("");
+    crearSelectorPersonalizado(sel);
+    refrescarSelectorPersonalizado(sel);
+    $("catDeleteStatus").textContent = "";
+    $("catDeleteModal").classList.add("open");
+  }
+  $("closeCatDeleteModal").addEventListener("click", () => $("catDeleteModal").classList.remove("open"));
+  $("cancelCatDeleteBtn").addEventListener("click", () => $("catDeleteModal").classList.remove("open"));
+  $("catDeleteModal").addEventListener("click", (e) => { if (e.target === $("catDeleteModal")) $("catDeleteModal").classList.remove("open"); });
+  $("confirmCatDeleteBtn").addEventListener("click", async () => {
+    if (!catDeletePendiente) return;
+    const { id, nombre } = catDeletePendiente;
+    const nuevaCategoria = $("catReasignarInput").value;
+    $("catDeleteStatus").textContent = "Procesando…";
+    try {
+      if (nuevaCategoria) {
+        await renameCategoriaEnMovimientos(catsModalTipo, nombre, nuevaCategoria);
+      }
+      await deleteCategoriaRemote(id);
+      await fetchCategorias();
+      renderCatsModalList();
+      populateCategorias();
+      await refreshAndRender();
+      $("catDeleteModal").classList.remove("open");
+      $("catsStatus").textContent = nuevaCategoria
+        ? `Categoría eliminada. Movimientos reasignados a "${nuevaCategoria}".`
+        : "Categoría eliminada.";
+    } catch (e) {
+      $("catDeleteStatus").textContent = "No se pudo completar: " + e.message;
+    }
+  });
+
+  // --- UI: modal de sugerencias por categoría ---
+  let sugerenciasCatId = null;
+  let sugerenciasActuales = [];
+
+  function renderSugerenciasChips() {
+    const wrap = $("sugerenciasChips");
+    if (sugerenciasActuales.length === 0) {
+      wrap.innerHTML = '<span style="font-size:12.5px; color:var(--ink-soft);">Aún no hay sugerencias para esta categoría.</span>';
+      return;
+    }
+    wrap.innerHTML = sugerenciasActuales.map((s, i) => `
+      <span class="sug-chip" data-index="${i}">
+        ${escapeHtml(s)}
+        <button type="button" aria-label="Quitar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </span>
+    `).join("");
+    wrap.querySelectorAll(".sug-chip button").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const i = Number(btn.closest(".sug-chip").dataset.index);
+        sugerenciasActuales.splice(i, 1);
+        await saveSugerencias();
+      });
+    });
+  }
+  async function saveSugerencias() {
+    $("sugerenciasStatus").textContent = "Guardando…";
+    try {
+      await setSugerenciasCategoriaRemote(sugerenciasCatId, sugerenciasActuales);
+      await fetchCategorias();
+      renderSugerenciasChips();
+      renderCatsModalList();
+      $("sugerenciasStatus").textContent = "";
+    } catch (e) {
+      $("sugerenciasStatus").textContent = "No se pudo guardar: " + e.message;
+    }
+  }
+  function openSugerenciasModal(c) {
+    sugerenciasCatId = c.id;
+    sugerenciasActuales = (c.sugerencias || []).slice();
+    $("sugerenciasModalTitle").textContent = "Sugerencias · " + c.nombre;
+    $("nuevaSugerenciaInput").value = "";
+    $("sugerenciasStatus").textContent = "";
+    renderSugerenciasChips();
+    $("sugerenciasModal").classList.add("open");
+  }
+  $("closeSugerenciasModal").addEventListener("click", () => $("sugerenciasModal").classList.remove("open"));
+  $("sugerenciasModal").addEventListener("click", (e) => { if (e.target === $("sugerenciasModal")) $("sugerenciasModal").classList.remove("open"); });
+  $("addSugerenciaBtn").addEventListener("click", async () => {
+    const val = $("nuevaSugerenciaInput").value.trim();
+    if (!val) return;
+    if (sugerenciasActuales.some((s) => s.toLowerCase() === val.toLowerCase())) {
+      $("nuevaSugerenciaInput").value = "";
+      return;
+    }
+    sugerenciasActuales.push(val);
+    $("nuevaSugerenciaInput").value = "";
+    await saveSugerencias();
+  });
+  $("nuevaSugerenciaInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); $("addSugerenciaBtn").click(); }
+  });
+
+  function openCatsModal() {
+    catsModalTipo = tipo;
+    $("catsBtnGasto").classList.toggle("active", catsModalTipo === "Gasto");
+    $("catsBtnAporte").classList.toggle("active", catsModalTipo === "Aporte");
+    $("catsStatus").textContent = "";
+    $("newCatInput").value = "";
+    renderCatsModalList();
+    $("catsModal").classList.add("open");
+  }
+
+  $("toggleNotaBtn").addEventListener("click", () => {
+    const wrap = $("notaWrap");
+    const showing = wrap.style.display !== "none";
+    wrap.style.display = showing ? "none" : "block";
+    if (!showing) $("notaInput").focus();
+  });
+
+  $("montoInput").addEventListener("blur", () => {
+    const val = parseMonto($("montoInput").value);
+    if (!isNaN(val) && val >= 0) {
+      $("montoInput").value = val.toFixed(2);
+    }
+  });
+  $("progMontoInput").addEventListener("blur", () => {
+    const val = parseMonto($("progMontoInput").value);
+    if (!isNaN(val) && val >= 0) {
+      $("progMontoInput").value = val.toFixed(2);
+    }
+  });
+
+  $("categoriaSelectBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    $("categoriaSelectList").classList.toggle("open");
+    $("categoriaSelectWrap").classList.toggle("open");
+  });
+  document.addEventListener("click", (e) => {
+    if (!$("categoriaSelectWrap").contains(e.target)) closeCategoriaSelect();
+  });
+
+  $("settingsBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const menu = $("settingsMenu");
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+  });
+  document.addEventListener("click", () => { $("settingsMenu").style.display = "none"; });
+  $("settingsMenu").addEventListener("click", (e) => e.stopPropagation());
+  $("settingsMenuCategorias").addEventListener("click", () => {
+    $("settingsMenu").style.display = "none";
+    openCatsModal();
+  });
+
+  // --- "Otras" opciones: mostrar/ocultar elementos, guardado en localStorage ---
+  function cargarPrefsOtras() {
+    return {
+      graficoGastos: localStorage.getItem("mf_show_grafico_gastos") !== "0",
+      graficoAportes: localStorage.getItem("mf_show_grafico_aportes") !== "0",
+    };
+  }
+  function aplicarPrefsOtras() {
+    const prefs = cargarPrefsOtras();
+    $("cardDonutGasto").style.display = prefs.graficoGastos ? "" : "none";
+    $("cardDonutAporte").style.display = prefs.graficoAportes ? "" : "none";
+  }
+  function abrirOtrasModal() {
+    const prefs = cargarPrefsOtras();
+    $("toggleGraficoGastos").checked = prefs.graficoGastos;
+    $("toggleGraficoAportes").checked = prefs.graficoAportes;
+    $("otrasModal").classList.add("open");
+  }
+  $("settingsMenuOtras").addEventListener("click", () => {
+    $("settingsMenu").style.display = "none";
+    abrirOtrasModal();
+  });
+  $("closeOtrasModal").addEventListener("click", () => $("otrasModal").classList.remove("open"));
+  $("otrasModal").addEventListener("click", (e) => { if (e.target === $("otrasModal")) $("otrasModal").classList.remove("open"); });
+  $("toggleGraficoGastos").addEventListener("change", (e) => {
+    localStorage.setItem("mf_show_grafico_gastos", e.target.checked ? "1" : "0");
+    aplicarPrefsOtras();
+  });
+  $("toggleGraficoAportes").addEventListener("change", (e) => {
+    localStorage.setItem("mf_show_grafico_aportes", e.target.checked ? "1" : "0");
+    aplicarPrefsOtras();
+  });
+  aplicarPrefsOtras();
+
+  $("closeCatsModal").addEventListener("click", () => $("catsModal").classList.remove("open"));
+  $("catsModal").addEventListener("click", (e) => { if (e.target === $("catsModal")) $("catsModal").classList.remove("open"); });
+  $("catsBtnGasto").addEventListener("click", () => { catsModalTipo = "Gasto"; $("catsBtnGasto").classList.add("active"); $("catsBtnAporte").classList.remove("active"); renderCatsModalList(); });
+  $("catsBtnAporte").addEventListener("click", () => { catsModalTipo = "Aporte"; $("catsBtnAporte").classList.add("active"); $("catsBtnGasto").classList.remove("active"); renderCatsModalList(); });
+  $("addCatBtn").addEventListener("click", async () => {
+    const nombre = $("newCatInput").value.trim();
+    if (!nombre) return;
+    if ((categorias[catsModalTipo] || []).some((c) => c.nombre.toLowerCase() === nombre.toLowerCase())) {
+      $("catsStatus").textContent = "Esa categoría ya existe.";
+      return;
+    }
+    $("catsStatus").textContent = "Añadiendo…";
+    try {
+      await insertCategoria(catsModalTipo, nombre);
+      $("newCatInput").value = "";
+      await fetchCategorias();
+      renderCatsModalList();
+      populateCategorias();
+      $("catsStatus").textContent = "Categoría añadida.";
+    } catch (e) {
+      $("catsStatus").textContent = "No se pudo añadir: " + e.message;
+    }
+  });
+  $("newCatInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); $("addCatBtn").click(); }
+  });
+
+  $("exportBtn").addEventListener("click", () => {
+    $("csvTextarea").value = csvText(getFilteredWithBalance());
+    $("csvModal").classList.add("open");
+    try {
+      downloadCsvFile();
+    } catch (e) {
+      console.warn("No se pudo descargar automáticamente:", e);
+    }
+  });
+  $("downloadCsvBtn").addEventListener("click", downloadCsvFile);
+  $("closeCsvModal").addEventListener("click", () => $("csvModal").classList.remove("open"));
+  $("csvModal").addEventListener("click", (e) => { if (e.target === $("csvModal")) $("csvModal").classList.remove("open"); });
+  $("csvTextarea").addEventListener("focus", (e) => e.target.select());
+  $("copyBtn").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText($("csvTextarea").value);
+      $("copyStatus").textContent = "¡Copiado!";
+    } catch (e) {
+      $("copyStatus").textContent = "No se pudo copiar automáticamente. Selecciona el texto y cópialo manualmente.";
+    }
+    setTimeout(() => { $("copyStatus").textContent = ""; }, 3000);
+  });
+
+  // --- UI: modal de listado de programados ---
+  function frecuenciaTexto(p) {
+    if (p.frecuencia === "mensual") return `Mensual, día ${p.dia}`;
+    const meses = ["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+    return `Anual, ${p.dia} ${meses[p.mes]}`;
+  }
+  function renderProgramadosList() {
+    const list = $("programadosList");
+    if (programados.length === 0) {
+      list.innerHTML = '<p class="empty-msg" style="padding:8px 0;">Aún no tienes gastos programados.</p>';
+      return;
+    }
+    list.innerHTML = programados.map((p) => `
+      <div class="cat-row" data-id="${p.id}" style="align-items:flex-start; ${p.activo ? "" : "opacity:0.55;"}">
+        <div class="prog-row-info" style="flex:1; min-width:0; cursor:pointer;">
+          <div style="font-size:13.5px; font-weight:600; display:flex; align-items:center; gap:6px;">
+            ${escapeHtml(p.nombre)}
+            ${p.activo ? "" : '<span style="font-size:10px; font-weight:700; color:var(--ink-soft); border:1px solid var(--line); border-radius:5px; padding:1px 5px; text-transform:uppercase; letter-spacing:0.3px;">Finalizado</span>'}
+            ${p.nota ? '<span title="Tiene nota" style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--gold); flex-shrink:0;"></span>' : ""}
+          </div>
+          <div style="font-size:11.5px; color:var(--ink-soft);">
+            ${(p.tipo === "Gasto" ? "−" : "+") + fmtMoney(Number(p.monto))} · ${p.activo ? `Próxima: ${p.proxima_fecha}` : `Finalizó: ${fmtFechaCorta(p.fecha_fin)}`}
+          </div>
+        </div>
+        <button type="button" class="edit-prog-btn" aria-label="Editar" style="background:none; border:none; cursor:pointer; padding:5px; color:var(--ink-soft);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
+        <button type="button" class="delete-prog-btn" aria-label="Eliminar" style="background:none; border:none; cursor:pointer; padding:5px; color:var(--rust);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    `).join("");
+    list.querySelectorAll(".prog-row-info").forEach((el) => {
+      el.addEventListener("click", () => {
+        const id = el.closest(".cat-row").dataset.id;
+        showProgDetail(programados.find((p) => p.id === id));
+      });
+    });
+    list.querySelectorAll(".edit-prog-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.closest(".cat-row").dataset.id;
+        openProgramadoForm(programados.find((p) => p.id === id));
+      });
+    });
+    list.querySelectorAll(".delete-prog-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.closest(".cat-row").dataset.id;
+        if (!confirm("¿Eliminar este gasto programado?")) return;
+        try {
+          await deleteProgramadoRemote(id);
+          await fetchProgramados();
+          renderProgramadosList();
+          renderPendientesBanner();
+        } catch (e) {
+          showError("No se pudo eliminar: " + e.message);
+        }
+      });
+    });
+  }
+  function openProgramadosModal() {
+    renderProgramadosList();
+    $("programadosModal").classList.add("open");
+  }
+  $("openProgramadosBtn").addEventListener("click", openProgramadosModal);
+  $("closeProgramadosModal").addEventListener("click", () => $("programadosModal").classList.remove("open"));
+  $("programadosModal").addEventListener("click", (e) => { if (e.target === $("programadosModal")) $("programadosModal").classList.remove("open"); });
+  $("newProgramadoBtn").addEventListener("click", () => openProgramadoForm(null));
+
+  // --- UI: formulario de creación/edición de programados ---
+  let progEditId = null;
+  const progTipo = "Gasto"; // Solo se pueden programar gastos (ya lo indica el título del modal).
+
+  function updateProgCategoriaOptions() {
+    const sel = $("progCategoriaInput");
+    const cats = categorias[progTipo] || [];
+    sel.innerHTML = cats.map((c) => `<option value="${escapeHtml(c.nombre)}">${escapeHtml(c.nombre)}</option>`).join("");
+    crearSelectorPersonalizado(sel);
+  }
+
+  function fechaDesdeDiaMes(dia, mes) {
+    // Construye una fecha representativa (año actual) a partir de día/mes guardados,
+    // solo para precargar el selector de fecha al editar.
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mesReal = mes || (hoy.getMonth() + 1);
+    return makeDateISO(anio, mesReal, dia || 1);
+  }
+
+  function openProgramadoForm(p) {
+    progEditId = p ? p.id : null;
+    $("programadoFormTitle").textContent = p ? "Editar gasto programado" : "Nuevo gasto programado";
+    $("progError").style.display = "none";
+    updateProgCategoriaOptions();
+    $("progNombreInput").value = p ? p.nombre : "";
+    $("progNotaInput").value = p && p.nota ? p.nota : "";
+    $("progNotaWrap").style.display = p && p.nota ? "block" : "none";
+    $("progCategoriaInput").value = p ? p.categoria : ($("progCategoriaInput").options[0] ? $("progCategoriaInput").options[0].value : "");
+    $("progMontoInput").value = p ? String(p.monto) : "";
+    $("progMetodoInput").value = p ? p.metodo : "Tarjeta";
+    $("progFrecuenciaInput").value = p ? p.frecuencia : "mensual";
+    $("progFechaInicioInput").value = p ? fechaDesdeDiaMes(p.dia, p.mes) : todayISO();
+    $("progFechaFinInput").value = p && p.fecha_fin ? p.fecha_fin : "";
+    $("progFechaFinWrap").style.display = p && p.fecha_fin ? "block" : "none";
+    $("progFechaFinRow").style.display = p && p.fecha_fin ? "none" : "block";
+    $("progHoraInput").value = p && p.hora ? p.hora.slice(0, 5) : "08:00";
+    [$("progCategoriaInput"), $("progMetodoInput"), $("progFrecuenciaInput")].forEach(refrescarSelectorPersonalizado);
+    $("programadoFormModal").classList.add("open");
+  }
+  $("closeProgramadoFormModal").addEventListener("click", () => $("programadoFormModal").classList.remove("open"));
+  $("programadoFormModal").addEventListener("click", (e) => { if (e.target === $("programadoFormModal")) $("programadoFormModal").classList.remove("open"); });
+  $("toggleProgNotaBtn").addEventListener("click", () => {
+    const wrap = $("progNotaWrap");
+    const mostrando = wrap.style.display !== "none";
+    wrap.style.display = mostrando ? "none" : "block";
+    if (!mostrando) $("progNotaInput").focus();
+  });
+  $("toggleProgFechaFinBtn").addEventListener("click", () => {
+    $("progFechaFinWrap").style.display = "block";
+    $("progFechaFinRow").style.display = "none";
+    $("progFechaFinInput").focus();
+  });
+  $("quitarProgFechaFinBtn").addEventListener("click", () => {
+    $("progFechaFinInput").value = "";
+    $("progFechaFinWrap").style.display = "none";
+    $("progFechaFinRow").style.display = "block";
+  });
+
+  let progPendiente = null; // datos calculados a la espera de confirmación de relleno retroactivo
+
+  $("progSaveBtn").addEventListener("click", async () => {
+    const nombre = $("progNombreInput").value.trim();
+    const nota = $("progNotaInput").value.trim();
+    const categoria = $("progCategoriaInput").value;
+    const monto = parseMonto($("progMontoInput").value);
+    const metodo = $("progMetodoInput").value;
+    const frecuencia = $("progFrecuenciaInput").value;
+    const fechaInicio = $("progFechaInicioInput").value;
+    const fechaFin = $("progFechaFinWrap").style.display !== "none" ? $("progFechaFinInput").value : "";
+    const hora = $("progHoraInput").value || "08:00";
+
+    if (!nombre) { $("progError").textContent = "Escribe un nombre."; $("progError").style.display = "block"; return; }
+    if (!categoria) { $("progError").textContent = "Elige una categoría."; $("progError").style.display = "block"; return; }
+    if (!monto || monto <= 0) { $("progError").textContent = "Introduce un monto válido."; $("progError").style.display = "block"; return; }
+    if (!fechaInicio) { $("progError").textContent = "Elige una fecha de inicio."; $("progError").style.display = "block"; return; }
+    if (fechaFin && fechaFin < fechaInicio) { $("progError").textContent = "La fecha de fin no puede ser anterior a la fecha de inicio."; $("progError").style.display = "block"; return; }
+    $("progError").style.display = "none";
+
+    const [anioSel, mesSel, diaSel] = fechaInicio.split("-").map(Number);
+    const dia = diaSel;
+    const mes = frecuencia === "anual" ? mesSel : null;
+
+    const esNueva = !progEditId;
+    const hoy = todayISO();
+    const necesitaRelleno = esNueva && fechaInicio < hoy;
+    let proxima_fecha = necesitaRelleno
+      ? nextOccurrence(frecuencia, dia, mes, hoy, false)
+      : nextOccurrence(frecuencia, dia, mes, hoy, true);
+    // Si la próxima ocurrencia calculada ya cae después de la fecha de fin,
+    // el programado nace directamente inactivo (no habrá más registros futuros).
+    const activo = !(fechaFin && proxima_fecha > fechaFin);
+    const payload = { nombre, tipo: progTipo, categoria, monto, metodo, frecuencia, dia, mes, hora, nota: nota || null, fecha_fin: fechaFin || null, proxima_fecha, activo };
+
+    progPendiente = { payload, necesitaRelleno, fechaInicio, fechaFin, hoy, frecuencia, dia, mes, hora, nombre, categoria, monto, metodo, nota };
+
+    if (necesitaRelleno) {
+      // El relleno retroactivo nunca pasa de la fecha de fin, si hay una.
+      const hastaRelleno = fechaFin && fechaFin < hoy ? fechaFin : hoy;
+      const ocurrencias = generarOcurrenciasBackfill(frecuencia, dia, mes, fechaInicio, hastaRelleno);
+      progPendiente.ocurrencias = ocurrencias;
+      const primera = fmtFechaCorta(ocurrencias[0]);
+      const ultima = fmtFechaCorta(ocurrencias[ocurrencias.length - 1]);
+      const n = ocurrencias.length;
+      $("progBackfillWarning").textContent =
+        `La fecha de inicio (${fmtFechaCorta(fechaInicio)}) es anterior a hoy. Al guardar se registrarán automáticamente ${n} movimiento${n === 1 ? "" : "s"} retroactivo${n === 1 ? "" : "s"}` +
+        (n === 1 ? ` (${primera})` : ` (del ${primera} al ${ultima})`) +
+        `. ¿Quieres registrarlos, o prefieres modificar la fecha de inicio antes de continuar?`;
+      $("progBackfillConfirmModal").classList.add("open");
+      return;
+    }
+
+    await ejecutarGuardadoProgramado(progPendiente);
+  });
+
+  $("closeProgBackfillModal").addEventListener("click", () => $("progBackfillConfirmModal").classList.remove("open"));
+  $("progBackfillConfirmModal").addEventListener("click", (e) => { if (e.target === $("progBackfillConfirmModal")) $("progBackfillConfirmModal").classList.remove("open"); });
+  $("modificarProgBackfillBtn").addEventListener("click", () => {
+    // Vuelve al formulario sin guardar nada, para que el usuario cambie la fecha.
+    $("progBackfillConfirmModal").classList.remove("open");
+    $("progFechaInicioInput").focus();
+  });
+  $("confirmProgBackfillBtn").addEventListener("click", async () => {
+    $("progBackfillConfirmModal").classList.remove("open");
+    if (progPendiente) await ejecutarGuardadoProgramado(progPendiente);
+  });
+
+  async function ejecutarGuardadoProgramado(datos) {
+    const { payload, necesitaRelleno, ocurrencias, hora, nombre, categoria, monto, metodo, nota } = datos;
+    $("progSaveBtn").disabled = true;
+    try {
+      if (progEditId) {
+        await updateProgramado(progEditId, payload);
+      } else {
+        await insertProgramado(payload);
+      }
+
+      if (necesitaRelleno) {
+        for (const fechaOcurrencia of ocurrencias) {
+          await insertEntry({ fecha: fechaOcurrencia, hora, tipo: progTipo, categoria, descripcion: nombre, monto, metodo, nota: nota || "" });
+        }
+        await refreshAndRender();
+        showToast(`Hecho — ${ocurrencias.length} movimiento${ocurrencias.length === 1 ? "" : "s"} anterior${ocurrencias.length === 1 ? "" : "es"} registrado${ocurrencias.length === 1 ? "" : "s"}.`);
+      }
+
+      await fetchProgramados();
+      renderProgramadosList();
+      renderPendientesBanner();
+      $("programadoFormModal").classList.remove("open");
+      progPendiente = null;
+    } catch (e) {
+      $("progError").textContent = "No se pudo guardar: " + e.message;
+      $("progError").style.display = "block";
+    } finally {
+      $("progSaveBtn").disabled = false;
+    }
+  }
+
+  // PWA: registrar el service worker (necesario para que Chrome ofrezca instalar la app)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+
+  // Init
+  (async function load() {
+    ["metodoInput", "filterRango", "progMetodoInput", "progFrecuenciaInput"].forEach((id) => {
+      crearSelectorPersonalizado($(id));
+    });
+    await fetchCategorias();
+    populateCategorias();
+    $("fechaInput").value = todayISO();
+    $("horaInput").value = nowHHMM();
+    $("movementsList").innerHTML = '<p class="empty-msg">Cargando…</p>';
+    await refreshAndRender();
+    try {
+      await fetchProgramados();
+      renderPendientesBanner();
+    } catch (e) {
+      // silently skip if scheduled expenses can't be loaded
+    }
+  })();
+})();
+</script>
+</body>
+</html>

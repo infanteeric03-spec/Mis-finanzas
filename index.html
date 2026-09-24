@@ -1517,8 +1517,7 @@
     tipo = t;
     $("btnGasto").classList.toggle("active", t === "Gasto");
     $("btnAporte").classList.toggle("active", t === "Aporte");
-    $("excluirPrevisionWrap").style.display = t === "Gasto" ? "inline-block" : "none";
-    if (t !== "Gasto") $("excluirPrevisionInput").checked = false;
+    $("excluirPrevisionWrap").title = t === "Gasto" ? "Excluir de la previsión anual" : "Excluir de todos los cálculos generales";
     populateCategorias();
   }
 
@@ -1610,7 +1609,7 @@
     const hora = $("horaInput").value || nowHHMM();
     const metodo = $("metodoInput").value;
     const nota = $("notaInput").value.trim();
-    const excluirPrevision = tipo === "Gasto" ? $("excluirPrevisionInput").checked : false;
+    const excluirPrevision = $("excluirPrevisionInput").checked;
     const entry = { fecha, hora, tipo, categoria, descripcion, monto: val, metodo, nota, excluirPrevision };
     showError(null);
     $("submitBtn").disabled = true;
@@ -1736,7 +1735,7 @@
     renderFiltroIndicator("movRangoIndicator");
 
     const gasto = visible.filter((e) => e.tipo === "Gasto").reduce((s, e) => s + e.monto, 0);
-    const aporte = visible.filter((e) => e.tipo === "Aporte").reduce((s, e) => s + e.monto, 0);
+    const aporte = visible.filter((e) => e.tipo === "Aporte" && !e.excluirPrevision).reduce((s, e) => s + e.monto, 0);
     const balance = aporte - gasto;
 
     const maskMoney = (str) => str.replace(/[0-9]/g, "*");
@@ -1772,7 +1771,7 @@
       list.innerHTML = pagina.map((e) => `
         <div class="movement-row" data-id="${e.id}">
           <div class="movement-info" style="min-width:0;">
-            <div class="desc">${escapeHtml(e.descripcion)}${e.nota ? ' <span title="Tiene nota" style="display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--gold); vertical-align:middle;"></span>' : ""}${e.excluirPrevision ? ' <span title="Excluido de la previsión anual" style="display:inline-flex; vertical-align:middle; color:var(--ink-soft);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>' : ""}</div>
+            <div class="desc">${escapeHtml(e.descripcion)}${e.nota ? ' <span title="Tiene nota" style="display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--gold); vertical-align:middle;"></span>' : ""}${e.excluirPrevision ? ` <span title="${e.tipo === "Gasto" ? "Excluido de la previsión anual" : "Excluido de todos los cálculos generales"}" style="display:inline-flex; vertical-align:middle; color:var(--ink-soft);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>` : ""}</div>
             <div class="meta">${e.fecha} · ${escapeHtml(e.categoria)} · ${escapeHtml(metodoAbbrev(e.metodo))}</div>
           </div>
           <div class="row-actions">
@@ -1818,7 +1817,7 @@
 
   function buildCategoryTotals(tipoFiltro) {
     const byCategory = {};
-    filteredEntries().filter((e) => e.tipo === tipoFiltro).forEach((e) => {
+    filteredEntries().filter((e) => e.tipo === tipoFiltro && !(tipoFiltro === "Aporte" && e.excluirPrevision)).forEach((e) => {
       byCategory[e.categoria] = (byCategory[e.categoria] || 0) + e.monto;
     });
     return Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
@@ -2148,11 +2147,11 @@
     $("gananciasMesLabel").textContent = fmtMesAbrev(mes);
 
     const delMes = entries.filter((e) => e.fecha.slice(0, 7) === mes);
-    const aportesMes = delMes.filter((e) => e.tipo === "Aporte").reduce((s, e) => s + e.monto, 0);
+    const aportesMes = delMes.filter((e) => e.tipo === "Aporte" && !e.excluirPrevision).reduce((s, e) => s + e.monto, 0);
     const gastosMes = delMes.filter((e) => e.tipo === "Gasto").reduce((s, e) => s + e.monto, 0);
     const netoMes = aportesMes - gastosMes;
 
-    const totalInicio = entries.reduce((s, e) => s + (e.tipo === "Aporte" ? e.monto : -e.monto), 0);
+    const totalInicio = entries.reduce((s, e) => s + (e.tipo === "Aporte" ? (e.excluirPrevision ? 0 : e.monto) : -e.monto), 0);
 
     $("gananciasAportesMes").textContent = fmtMoney(aportesMes);
     $("gananciasGastosMes").textContent = fmtMoney(gastosMes);
@@ -2294,11 +2293,11 @@
     if (!ultimos.length) return [];
     let acumulado = entries
       .filter((e) => e.fecha.slice(0, 7) < ultimos[0])
-      .reduce((s, e) => s + (e.tipo === "Aporte" ? e.monto : -e.monto), 0);
+      .reduce((s, e) => s + (e.tipo === "Aporte" ? (e.excluirPrevision ? 0 : e.monto) : -e.monto), 0);
     return ultimos.map((mes) => {
       const neto = entries
         .filter((e) => e.fecha.slice(0, 7) === mes)
-        .reduce((s, e) => s + (e.tipo === "Aporte" ? e.monto : -e.monto), 0);
+        .reduce((s, e) => s + (e.tipo === "Aporte" ? (e.excluirPrevision ? 0 : e.monto) : -e.monto), 0);
       acumulado += neto;
       return { mes, neto, acumulado };
     });

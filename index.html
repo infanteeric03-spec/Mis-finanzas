@@ -328,9 +328,10 @@
     align-items: center; justify-content: center; padding: 16px; z-index: 50;
   }
   .modal-overlay.open { display: flex; }
-  /* Este modal se abre desde dentro de otro modal (la lista de programados),
-     así que necesita quedar por encima aunque en el HTML aparezca antes. */
-  #progDetailModal { z-index: 60; }
+  /* Estos modales se abren desde dentro de otro modal (la lista de programados,
+     o el listado de aportes/gastos del mes), así que necesitan quedar por encima
+     aunque en el HTML aparezcan antes. */
+  #progDetailModal, #detailModal { z-index: 60; }
   .modal-box {
     background: var(--paper); border-radius: 14px; padding: 32px 20px 20px; max-width: 560px; width: 100%;
     max-height: 80vh; display: flex; flex-direction: column; gap: 12px;
@@ -425,7 +426,7 @@
         </label>
         <div id="recordatorioHoraWrap" style="display:none; margin-top:4px;">
           <label style="display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; font-weight:600;">Hora del aviso</label>
-          <input type="time" id="recordatorioHoraInput" value="21:00" style="border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:14px; color:var(--ink); background:white;" />
+          <input type="time" id="recordatorioHoraInput" value="19:00" style="border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:14px; color:var(--ink); background:white;" />
           <span id="recordatorioEstado" style="display:block; font-size:11.5px; color:var(--ink-soft); margin-top:6px;"></span>
         </div>
       </div>
@@ -689,11 +690,11 @@
             </div>
           </div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:100px; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 12px;">
+            <div id="gananciasAportesCard" style="flex:1; min-width:100px; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer;">
               <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--ink-soft); font-weight:700;">Aportes del mes</div>
               <div class="ledger-num" style="font-size:16px; font-weight:700; color:var(--sage);" id="gananciasAportesMes">0,00 €</div>
             </div>
-            <div style="flex:1; min-width:100px; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 12px;">
+            <div id="gananciasGastosCard" style="flex:1; min-width:100px; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer;">
               <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px; color:var(--ink-soft); font-weight:700;">Gastos del mes</div>
               <div class="ledger-num" style="font-size:16px; font-weight:700; color:var(--rust);" id="gananciasGastosMes">0,00 €</div>
             </div>
@@ -761,6 +762,18 @@
         </button>
       </div>
       <div id="detailContent" class="detail-content"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="mesMovimientosModal">
+    <div class="modal-box" style="min-height:auto;">
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h3 class="ledger-title" id="mesMovimientosTitle">Movimientos del mes</h3>
+        <button class="icon-btn" id="closeMesMovimientosModal" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div id="mesMovimientosList" class="movements-list" style="gap:8px;"></div>
     </div>
   </div>
 
@@ -2162,6 +2175,44 @@
     totalEl.textContent = fmtMoney(totalInicio);
     totalEl.style.color = totalInicio >= 0 ? "var(--ink)" : "var(--rust)";
   }
+
+  function abrirMesMovimientosModal(tipo) {
+    const mes = gananciasMesSeleccionado;
+    const delMesTipo = entries
+      .filter((e) => e.fecha.slice(0, 7) === mes && e.tipo === tipo && !(tipo === "Aporte" && e.excluirPrevision))
+      .sort((a, b) => (a.fecha + (a.hora || "")).localeCompare(b.fecha + (b.hora || "")))
+      .reverse();
+
+    $("mesMovimientosTitle").textContent = `${tipo === "Aporte" ? "Aportes" : "Gastos"} de ${fmtMesAbrev(mes)}`;
+
+    const list = $("mesMovimientosList");
+    list.innerHTML = delMesTipo.length
+      ? delMesTipo.map((e) => `
+        <div class="movement-row" data-id="${e.id}">
+          <div class="movement-info" style="min-width:0; cursor:pointer;">
+            <div class="desc">${escapeHtml(e.descripcion)}${e.nota ? ' <span title="Tiene nota" style="display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--gold); vertical-align:middle;"></span>' : ""}</div>
+            <div class="meta">${e.fecha} · ${escapeHtml(e.categoria)} · ${escapeHtml(metodoAbbrev(e.metodo))}</div>
+          </div>
+          <div class="row-actions">
+            <span class="amount ledger-num ${e.tipo === "Gasto" ? "gasto" : "aporte"}">${e.tipo === "Gasto" ? "−" : "+"}${fmtMoney(e.monto)}</span>
+          </div>
+        </div>
+      `).join("")
+      : `<p class="empty-msg">No hay ${tipo === "Aporte" ? "aportes" : "gastos"} registrados este mes.</p>`;
+
+    list.querySelectorAll(".movement-info").forEach((el) => {
+      el.addEventListener("click", () => {
+        const id = el.closest(".movement-row").dataset.id;
+        showDetail(entries.find((e) => e.id === id));
+      });
+    });
+
+    $("mesMovimientosModal").classList.add("open");
+  }
+  $("gananciasAportesCard").addEventListener("click", () => abrirMesMovimientosModal("Aporte"));
+  $("gananciasGastosCard").addEventListener("click", () => abrirMesMovimientosModal("Gasto"));
+  $("closeMesMovimientosModal").addEventListener("click", () => $("mesMovimientosModal").classList.remove("open"));
+  $("mesMovimientosModal").addEventListener("click", (e) => { if (e.target === $("mesMovimientosModal")) $("mesMovimientosModal").classList.remove("open"); });
   function actualizarMesDesdeSelectores() {
     const m = $("gananciasMesSelect").value;
     const y = $("gananciasAnioSelect").value;

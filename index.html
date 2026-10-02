@@ -584,6 +584,10 @@
           <p class="empty-msg">Cargando…</p>
         </div>
         <div id="movementsPager" style="display:flex; align-items:center; gap:10px; padding:10px 18px; border-top:1px dashed var(--line);"></div>
+        <div id="movTotalFiltrado" style="display:none; padding:10px 18px; border-top:1px dashed var(--line); font-size:13px; color:var(--ink-soft); align-items:center; justify-content:space-between;">
+          <span>Total de <span id="movTotalFiltradoCount">0</span> movimientos mostrados</span>
+          <span class="ledger-num" id="movTotalFiltradoValor" style="font-weight:700;">0,00 €</span>
+        </div>
       </div>
 
       <p class="footer-note" id="footerNote">Cargando estado de conexión…</p>
@@ -1763,15 +1767,18 @@
     $("exportBtn").disabled = visible.length === 0;
 
     const list = $("movementsList");
+    const hayFiltrosOBusqueda = rangoFiltro !== "all" || !!categoriaFiltro || !!textoBusqueda;
 
     if (entries.length === 0) {
       list.innerHTML = '<p class="empty-msg">Aún no hay movimientos registrados. Añade el primero arriba.</p>';
       $("movementsPager").innerHTML = "";
+      $("movTotalFiltrado").style.display = "none";
     } else if (visible.length === 0) {
       list.innerHTML = textoBusqueda
         ? `<p class="empty-msg">Sin resultados para "${textoBusqueda}".</p>`
         : '<p class="empty-msg">No hay movimientos en este rango de fechas.</p>';
       $("movementsPager").innerHTML = "";
+      $("movTotalFiltrado").style.display = "none";
     } else {
       const ordenados = [...visible].reverse();
       const totalPaginas = Math.max(1, Math.ceil(ordenados.length / MOVS_POR_PAGINA));
@@ -1819,6 +1826,18 @@
       });
 
       renderMovementsPager(totalPaginas, ordenados.length);
+
+      const totalFiltradoEl = $("movTotalFiltrado");
+      if (hayFiltrosOBusqueda) {
+        const totalFiltrado = ordenados.reduce((s, e) => s + (e.tipo === "Aporte" ? (e.excluirPrevision ? 0 : e.monto) : -e.monto), 0);
+        $("movTotalFiltradoCount").textContent = ordenados.length;
+        const valorEl = $("movTotalFiltradoValor");
+        valorEl.textContent = montosOcultos ? maskMoney(fmtMoney(totalFiltrado)) : fmtMoney(totalFiltrado);
+        valorEl.style.color = totalFiltrado >= 0 ? "var(--sage)" : "var(--rust)";
+        totalFiltradoEl.style.display = "flex";
+      } else {
+        totalFiltradoEl.style.display = "none";
+      }
     }
 
     // Los donuts solo se dibujan si la pestaña de gráficos está visible;

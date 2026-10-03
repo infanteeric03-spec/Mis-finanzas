@@ -88,6 +88,15 @@
   .tipo-btn.aporte { border: 1.5px solid var(--sage); color: var(--sage); }
   .tipo-btn.aporte.active { background: var(--sage); color: white; }
 
+  .filtro-tipo-btn {
+    border-radius: 7px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    background: white; cursor: pointer; flex-shrink: 0;
+  }
+  .filtro-tipo-btn.aporte { border: 1.5px solid var(--sage); color: var(--sage); }
+  .filtro-tipo-btn.aporte.active { background: var(--sage); color: white; }
+  .filtro-tipo-btn.gasto { border: 1.5px solid var(--rust); color: var(--rust); }
+  .filtro-tipo-btn.gasto.active { background: var(--rust); color: white; }
+
   .field { display: block; margin-bottom: 12px; }
   .field label {
     display: block; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px;
@@ -567,6 +576,12 @@
           </select>
           <button type="button" id="customRangoBtn" style="display:none; border:1px solid var(--line); border-radius:7px; padding:5px 10px; font-size:12.5px; color:var(--ink); background:white; cursor:pointer; white-space:nowrap;">
             Elegir fechas
+          </button>
+          <button type="button" id="filtroAportesBtn" class="filtro-tipo-btn aporte" aria-label="Mostrar solo aportes" title="Mostrar solo aportes" aria-pressed="false">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+          </button>
+          <button type="button" id="filtroGastosBtn" class="filtro-tipo-btn gasto" aria-label="Mostrar solo gastos" title="Mostrar solo gastos" aria-pressed="false">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
           </button>
           <button type="button" id="toggleBuscarBtn" aria-label="Buscar movimientos" title="Buscar movimientos" style="margin-left:auto; border:1px solid var(--line); border-radius:7px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:white; color:var(--ink); cursor:pointer; flex-shrink:0;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -1373,6 +1388,7 @@
   }
   let categoriaFiltro = null; // { tipo, categoria } | null
   let textoBusqueda = "";
+  let filtroTipoMov = null; // null | "Aporte" | "Gasto"
 
   function normalizarTexto(s) {
     return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1399,6 +1415,7 @@
   function getFilteredWithBalance() {
     return computeWithBalance().filter((e) => {
       if (!enRango(e.fecha)) return false;
+      if (filtroTipoMov && e.tipo !== filtroTipoMov) return false;
       if (categoriaFiltro && (e.tipo !== categoriaFiltro.tipo || e.categoria !== categoriaFiltro.categoria)) return false;
       if (!coincideBusqueda(e)) return false;
       return true;
@@ -1726,10 +1743,25 @@
       textoBusqueda = "";
       $("buscarInput").value = "";
       $("buscarWrap").style.display = "none";
+    } else if (tipo === "tipoMov") {
+      aplicarFiltroTipoMov(null);
+      return; // aplicarFiltroTipoMov ya llama a render()
     }
     paginaActual = 1;
     render();
   }
+
+  function aplicarFiltroTipoMov(tipo) {
+    filtroTipoMov = filtroTipoMov === tipo ? null : tipo;
+    $("filtroAportesBtn").classList.toggle("active", filtroTipoMov === "Aporte");
+    $("filtroAportesBtn").setAttribute("aria-pressed", filtroTipoMov === "Aporte");
+    $("filtroGastosBtn").classList.toggle("active", filtroTipoMov === "Gasto");
+    $("filtroGastosBtn").setAttribute("aria-pressed", filtroTipoMov === "Gasto");
+    paginaActual = 1;
+    render();
+  }
+  $("filtroAportesBtn").addEventListener("click", () => aplicarFiltroTipoMov("Aporte"));
+  $("filtroGastosBtn").addEventListener("click", () => aplicarFiltroTipoMov("Gasto"));
 
   function renderFiltroIndicator(containerId) {
     const el = $(containerId);
@@ -1738,6 +1770,7 @@
       `<button type="button" class="quitar-filtro-btn" data-filtro="${tipo}" style="background:none; border:none; color:var(--rust); text-decoration:underline; cursor:pointer; font-size:inherit; font-weight:600; padding:0;">Quitar</button>`;
     const parts = [];
     if (rangoFiltro !== "all") parts.push(`Rango: ${rangoTexto()} ${quitarBtn("rango")}`);
+    if (filtroTipoMov) parts.push(`Tipo: ${filtroTipoMov === "Aporte" ? "Aportes" : "Gastos"} ${quitarBtn("tipoMov")}`);
     if (categoriaFiltro) parts.push(`Categoría: ${categoriaFiltro.categoria} ${quitarBtn("categoria")}`);
     if (textoBusqueda) parts.push(`Búsqueda: "${textoBusqueda}" ${quitarBtn("busqueda")}`);
     el.innerHTML = parts.join(" &nbsp;·&nbsp; ");
@@ -1767,7 +1800,7 @@
     $("exportBtn").disabled = visible.length === 0;
 
     const list = $("movementsList");
-    const hayFiltrosOBusqueda = rangoFiltro !== "all" || !!categoriaFiltro || !!textoBusqueda;
+    const hayFiltrosOBusqueda = rangoFiltro !== "all" || !!filtroTipoMov || !!categoriaFiltro || !!textoBusqueda;
 
     if (entries.length === 0) {
       list.innerHTML = '<p class="empty-msg">Aún no hay movimientos registrados. Añade el primero arriba.</p>';

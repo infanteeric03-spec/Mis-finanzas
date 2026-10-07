@@ -3533,6 +3533,73 @@
     return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
   }
 
+  // El usuario quiere el aviso activo: lo recordamos en local para poder reparar la
+  // suscripción si el navegador/sistema la descarta por su cuenta.
+  function recordatorioDeseado() {
+    try { return JSON.parse(localStorage.getItem("mf_recordatorio") || "null"); } catch (e) { return null; }
+  }
+  function marcarRecordatorioDeseado(horaLocal) {
+    try { localStorage.setItem("mf_recordatorio", JSON.stringify({ on: true, hora: horaLocal })); } catch (e) {}
+  }
+  function olvidarRecordatorioDeseado() {
+    try { localStorage.removeItem("mf_recordatorio"); } catch (e) {}
+  }
+
+  let reparandoRecordatorio = null;
+  function repararRecordatorio() {
+    if (reparandoRecordatorio) return reparandoRecordatorio;
+    reparandoRecordatorio = (async () => {
+      try {
+        let deseado = recordatorioDeseado();
+        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
+        if (!deseado) {
+          // Usuarios que ya tenían el aviso activo antes de esta mejora: adoptar su suscripción actual.
+          const reg0 = await navigator.serviceWorker.ready;
+          const sub0 = await reg0.pushManager.getSubscription();
+          if (sub0) {
+            let hora0 = "19:00";
+            try {
+              const r0 = await fetch(PUSH_URL + "?endpoint=eq." + encodeURIComponent(sub0.endpoint) + "&select=hora_local", { headers: SB_HEADERS });
+              const rows0 = await r0.json();
+              if (rows0[0] && rows0[0].hora_local) hora0 = rows0[0].hora_local;
+            } catch (e) {}
+            marcarRecordatorioDeseado(hora0);
+          }
+          return;
+        }
+        if (!deseado.on) return;
+        if (Notification.permission !== "granted") return; // sin permiso no se puede reparar sin interacción
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        const hora = deseado.hora || "19:00";
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          });
+          await guardarSuscripcion(sub, hora);
+          return;
+        }
+        // La suscripción existe: comprobar que en el servidor sigue activa.
+        const res = await fetch(PUSH_URL + "?endpoint=eq." + encodeURIComponent(sub.endpoint) + "&select=activo", { headers: SB_HEADERS });
+        const rows = await res.json();
+        if (!Array.isArray(rows) || !rows[0] || rows[0].activo === false) {
+          await guardarSuscripcion(sub, hora);
+        }
+      } catch (e) {
+        // silencioso: se reintentará en la próxima apertura
+      } finally {
+        reparandoRecordatorio = null;
+      }
+    })();
+    return reparandoRecordatorio;
+  }
+  // Reparar al abrir la app y cada vez que vuelve a primer plano
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") repararRecordatorio();
+  });
+  window.addEventListener("load", () => { repararRecordatorio(); });
+
   async function cargarEstadoRecordatorio() {
     const estadoEl = $("recordatorioEstado");
     estadoEl.textContent = "";
@@ -3541,10 +3608,14 @@
       estadoEl.textContent = "Tu navegador no soporta avisos push.";
       return;
     }
+    await repararRecordatorio();
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
     $("toggleRecordatorio").checked = !!sub;
     $("recordatorioHoraWrap").style.display = sub ? "block" : "none";
+    if (!sub && recordatorioDeseado() && "Notification" in window && Notification.permission !== "granted") {
+      estadoEl.textContent = "El navegador ha desactivado el permiso de notificaciones. Vuelve a activar el aviso para concederlo de nuevo.";
+    }
     if (sub) {
       try {
         const res = await fetch(PUSH_URL + "?endpoint=eq." + encodeURIComponent(sub.endpoint) + "&select=hora_local", { headers: SB_HEADERS });
@@ -3600,6 +3671,7 @@
           });
         }
         await guardarSuscripcion(sub, $("recordatorioHoraInput").value);
+        marcarRecordatorioDeseado($("recordatorioHoraInput").value);
         $("recordatorioHoraWrap").style.display = "block";
         estadoEl.textContent = "Activado.";
       } catch (err) {
@@ -3615,6 +3687,7 @@
           await fetch(PUSH_URL + "?endpoint=eq." + encodeURIComponent(sub.endpoint), { method: "DELETE", headers: SB_HEADERS });
           await sub.unsubscribe();
         }
+        olvidarRecordatorioDeseado();
         $("recordatorioHoraWrap").style.display = "none";
         estadoEl.textContent = "";
       } catch (err) {
@@ -3630,6 +3703,7 @@
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         await guardarSuscripcion(sub, e.target.value);
+        marcarRecordatorioDeseado(e.target.value);
         estadoEl.textContent = "Hora actualizada.";
       }
     } catch (err) {
